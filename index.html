@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Kingdom's Dice RPG - Open Rolls</title>
+    <title>Kingdom's Dice RPG - Global Turns</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=MedievalSharp&display=swap" rel="stylesheet">
     
     <style>
@@ -73,7 +73,7 @@
         }
         .shake-effect {
             animation: shake 0.5s;
-            border: 4px solid #d32f2f !important; /* Bordo rosso durante l'impatto */
+            border: 4px solid #d32f2f !important; 
         }
 
         /* --- MEDIA QUERY SMARTPHONE --- */
@@ -387,7 +387,7 @@
                 <div class="hp-bar-container"><div class="hp-fill" id="hpBarPlayer" style="width: 100%;"></div></div>
                 <div style="display:flex; justify-content:space-between; font-size:0.8em; margin-top:5px; font-weight:bold; color:#6d4c41;">
                     <span><span id="hpPlayer">25</span>/<span id="hpMaxPlayer">25</span> PV</span>
-                    <span>T: <span id="roundCounter">1</span></span>
+                    <span>Turno: <span id="roundCounter">1</span></span>
                 </div>
             </div>
             <div class="vs-divider">VS</div>
@@ -672,14 +672,12 @@
         let hStats = getHeroStats(heroLevel);
         let eStats = getEnemyStats(level);
         
-        // Tiri Dadi Originali
         let rawRollP = Math.floor(Math.random() * hStats.die) + 1;
         let rawRollE = Math.floor(Math.random() * eStats.die) + 1;
         
         let rollP = rawRollP;
         let rollE = rawRollE;
 
-        // Gestione Trap & Pozione (Modificano il valore finale, ma conserviamo i raw per il controllo Open Roll)
         if (vineTrap) { rollP = 0; rawRollP = 0; vineTrap = false; updateStatusIcons(); }
         if (items.potion && rollP > 0) { rollP += 2; items.potion = false; }
 
@@ -689,8 +687,6 @@
 
         let difference = Math.abs(rollP - rollE);
         
-        // --- LOGICA OPEN ROLL (TIRO APERTO) ---
-        // Condizione: Attaccante fa MAX del suo dado E Difensore fa 1
         let isOpenRollPlayer = (rawRollP === hStats.die && rawRollE === 1);
         let isOpenRollEnemy = (rawRollE === eStats.die && rawRollP === 1);
 
@@ -699,13 +695,11 @@
             chestCount = Math.min(5, chestCount + 1);
             let mult = 1;
             
-            // Logica Open Roll Player
             if (isOpenRollPlayer) {
-                mult = 2; // Raddoppia base
-                triggerShake(); // Effetto visivo
+                mult = 2; 
+                triggerShake(); 
             }
             
-            // Combo Multipliers si applicano DOPO
             let comboMult = 1;
             if (streak >= 5) comboMult = 4; else if (streak >= 3) comboMult = 1.5;
             mult = mult * comboMult;
@@ -724,7 +718,6 @@
         } else if (rollP < rollE) {
             streak = 0;
             if (mirrorEffect) {
-                // Specchio riflette danno, incluso Open Roll nemico se attivo
                 let dmg = difference;
                 if(isOpenRollEnemy) { dmg *= 2; triggerShake(); }
                 
@@ -733,9 +726,8 @@
             } else {
                 let dmg = difference;
                 
-                // Logica Open Roll Enemy
                 if (isOpenRollEnemy) {
-                    dmg *= 2; // Raddoppia base
+                    dmg *= 2; 
                     triggerShake();
                 }
 
@@ -895,7 +887,9 @@
         document.getElementById('hpMaxEnemy').textContent = maxHpEnemy; 
 
         document.getElementById('gold').textContent = gold;
-        document.getElementById('roundCounter').textContent = round;
+        
+        // --- MODIFICA QUI: Uso totalRounds invece di round ---
+        document.getElementById('roundCounter').textContent = totalRounds;
         
         for(let i=1; i<=5; i++) {
             let dot = document.getElementById(`dot${i}`);
