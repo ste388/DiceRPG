@@ -2,8 +2,8 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kingdom's Dice RPG - Fixed Reset</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Kingdom's Dice RPG - Open Rolls</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=MedievalSharp&display=swap" rel="stylesheet">
     
     <style>
@@ -43,13 +43,54 @@
             border: none;
         }
 
-        /* HISTORY PANEL */
+        /* HISTORY PANEL (PC) */
         .history-panel { 
             flex: 1; min-width: 280px; max-height: 700px; 
             display: flex; flex-direction: column; 
             background: linear-gradient(to bottom, #fff8e1, #ffe0b2);
             border-radius: 20px 20px 50px 50px; 
         }
+
+        /* GAME PANEL */
+        .game-panel { flex: 2; width: 100%; transition: transform 0.1s; }
+        .game-panel.boss-mode { 
+            box-shadow: 0 0 0 6px #7b1fa2, 0 0 50px rgba(123, 31, 162, 0.5); 
+        }
+
+        /* ANIMAZIONE TREMOLIO (SHAKE) PER TIRO APERTO */
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+        .shake-effect {
+            animation: shake 0.5s;
+            border: 4px solid #d32f2f !important; /* Bordo rosso durante l'impatto */
+        }
+
+        /* --- MEDIA QUERY SMARTPHONE --- */
+        @media (max-width: 768px) {
+            body { padding: 10px; align-items: flex-start; }
+            .main-wrapper { flex-direction: column-reverse; gap: 15px; }
+            .history-panel { width: 100%; min-width: 0; max-height: 250px; border-radius: 20px; padding: 15px; }
+            .card { padding: 20px; border-radius: 20px; }
+            .fighter-name { font-size: 1.2em; }
+            .history-title { font-size: 1.4em; }
+            .dadi-area { gap: 20px; margin: 20px 0; }
+            .dado { width: 80px; height: 80px; font-size: 2.2em; border-radius: 25px; }
+            .btn-style { padding: 15px; font-size: 1.1em; }
+            .shop-section { gap: 10px; }
+            .shop-item { padding: 10px; }
+        }
+
         .history-title {
             font-family: 'MedievalSharp', cursive;
             font-size: 1.8em; text-align: center; 
@@ -72,6 +113,7 @@
         }
         .log-entry.dmg-deal { color: #2e7d32; background: #e8f5e9; }
         .log-entry.dmg-take { color: #c62828; background: #ffebee; }
+        .log-entry.critical { color: #b71c1c; background: #ffcdd2; border: 1px solid #d32f2f; }
         .log-entry.chest { color: #6a1b9a; background: #f3e5f5; }
         .log-entry.win { color: #f57f17; background: #fffde7; border: 1px solid #fbc02d; }
         .log-entry.draw { color: #555; background: #eee; }
@@ -81,31 +123,25 @@
             padding: 3px 8px; border-radius: 10px; margin-right: 8px; 
         }
 
-        /* GAME PANEL */
-        .game-panel { flex: 2; }
-        .game-panel.boss-mode { 
-            box-shadow: 0 0 0 6px #7b1fa2, 0 0 50px rgba(123, 31, 162, 0.5); 
-        }
-
         /* HEADER */
         .battle-header {
             display: flex; justify-content: space-between; align-items: center;
             margin-bottom: 25px; 
             background: rgba(93, 64, 55, 0.1); 
-            padding: 20px; border-radius: 25px;
+            padding: 15px; border-radius: 25px;
         }
         .fighter-stat { flex: 1; text-align: center; }
-        .fighter-name { font-family: 'MedievalSharp'; font-size: 1.5em; color: #3e2723; margin-bottom: 8px; }
+        .fighter-name { font-family: 'MedievalSharp'; color: #3e2723; margin-bottom: 8px; }
         
         .vs-divider { 
-            font-family: 'MedievalSharp'; font-size: 1.8em; color: #8d6e63; margin: 0 20px; 
-            background: white; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;
+            font-family: 'MedievalSharp'; font-size: 1.5em; color: #8d6e63; margin: 0 10px; 
+            background: white; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
             border-radius: 50%; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
 
         /* BARRE VITA */
         .hp-bar-container {
-            width: 100%; height: 20px; 
+            width: 100%; height: 15px; 
             background: #d7ccc8; border-radius: 15px; 
             overflow: hidden; box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);
             position: relative;
@@ -121,16 +157,16 @@
         /* STATS & COMBO */
         .stats-row { 
             display: flex; justify-content: space-between; align-items: center; 
-            margin-bottom: 20px; padding: 0 10px;
+            margin-bottom: 20px; padding: 0 5px;
         }
         .gold-display { 
-            font-size: 1.4em; font-weight: bold; color: #f9a825; 
-            background: #fff8e1; padding: 5px 15px; border-radius: 20px;
+            font-size: 1.2em; font-weight: bold; color: #f9a825; 
+            background: #fff8e1; padding: 5px 12px; border-radius: 20px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1); border: 1px solid #ffe0b2;
         }
 
         /* COMBO FLAMES */
-        .combo-flames { font-size: 1.5em; }
+        .combo-flames { font-size: 1.3em; }
         .combo-flame {
             display: inline-block; opacity: 0.2; filter: grayscale(100%);
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -139,18 +175,18 @@
             opacity: 1; filter: grayscale(0%) drop-shadow(0 0 6px rgba(255, 111, 0, 0.8));
             transform: scale(1.4) translateY(-2px);
         }
-        .combo-text { font-family: 'MedievalSharp'; color: #c62828; font-size: 0.9em; margin-top: 5px; font-weight: bold; }
+        .combo-text { font-family: 'MedievalSharp'; color: #c62828; font-size: 0.8em; margin-top: 5px; font-weight: bold; text-align: right;}
 
         /* CHEST PROGRESS */
         .chest-progress-container {
-            display: flex; align-items: center; justify-content: center; gap: 15px;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
             background: rgba(93, 64, 55, 0.85); color: white;
-            padding: 8px 25px; border-radius: 50px; 
+            padding: 8px 20px; border-radius: 50px; 
             margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
             width: fit-content; margin-left: auto; margin-right: auto;
         }
-        .chest-dots { display: flex; flex-direction: row; gap: 8px; }
-        .chest-dot { width: 12px; height: 12px; background: #4e342e; border-radius: 50%; transition: 0.3s; border: 1px solid rgba(255,255,255,0.2); }
+        .chest-dots { display: flex; flex-direction: row; gap: 6px; }
+        .chest-dot { width: 10px; height: 10px; background: #4e342e; border-radius: 50%; transition: 0.3s; border: 1px solid rgba(255,255,255,0.2); }
         .chest-dot.active { background: #00e676; box-shadow: 0 0 8px #00e676; transform: scale(1.3); border-color: white; }
 
         /* NEGOZIO */
@@ -165,12 +201,12 @@
         .shop-item:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(93, 64, 55, 0.2); }
         .shop-item.active { border-color: #42a5f5; background: #e3f2fd; }
         
-        .item-emoji { font-size: 2em; margin-bottom: 5px; display: block; }
+        .item-emoji { font-size: 1.8em; margin-bottom: 5px; display: block; }
         .item-price { font-weight: bold; color: #fbc02d; font-family: 'Cinzel'; }
-        .item-desc { font-size: 0.75em; color: #8d6e63; display: block; margin-top: 2px; }
+        .item-desc { font-size: 0.7em; color: #8d6e63; display: block; margin-top: 2px; }
 
         /* DADI */
-        .dadi-area { display: flex; justify-content: center; gap: 50px; margin: 30px 0; min-height: 120px; }
+        .dadi-area { display: flex; justify-content: center; gap: 40px; margin: 30px 0; min-height: 100px; }
         .dado-wrapper { text-align: center; position: relative; }
         .dado {
             width: 100px; height: 100px; 
@@ -182,21 +218,20 @@
         }
         .dado.boss-dado { background: #f3e5f5; color: #7b1fa2; }
         
-        /* ETICHETTA TIPO DADO */
         .dice-label {
             position: absolute; bottom: -25px; left: 0; right: 0;
             font-size: 0.8em; color: #8d6e63; font-weight: bold;
         }
 
         .marker {
-            position: absolute; width: 36px; height: 36px; border-radius: 50%; 
+            position: absolute; width: 30px; height: 30px; border-radius: 50%; 
             display: none; align-items: center; justify-content: center;
-            font-size: 1em; font-weight: bold; color: white;
+            font-size: 0.9em; font-weight: bold; color: white;
             box-shadow: 0 4px 8px rgba(0,0,0,0.3); z-index: 10;
-            border: 3px solid white;
+            border: 2px solid white;
         }
-        .marker.potion { top: -10px; right: -10px; background: #8e24aa; }
-        .marker.shield { top: -10px; left: -10px; background: #1976d2; }
+        .marker.potion { top: -8px; right: -8px; background: #8e24aa; }
+        .marker.shield { top: -8px; left: -8px; background: #1976d2; }
         
         .status-icon {
             position: absolute; bottom: -45px; width: 100%; text-align: center;
@@ -205,7 +240,7 @@
         .mini-icon { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.9em; color: white; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
 
         /* PULSANTI */
-        .actions-area { min-height: 100px; display: flex; gap: 20px; align-items: center; padding: 10px 0; }
+        .actions-area { min-height: 80px; display: flex; gap: 15px; align-items: center; padding: 10px 0; }
         
         .btn-style {
             flex: 1; padding: 18px; 
@@ -215,6 +250,7 @@
             text-shadow: 0 2px 2px rgba(0,0,0,0.3);
             box-shadow: 0 8px 15px rgba(0,0,0,0.2);
             transition: all 0.2s;
+            -webkit-tap-highlight-color: transparent;
         }
         .btn-style:hover { transform: translateY(-3px); box-shadow: 0 12px 20px rgba(0,0,0,0.25); }
         .btn-style:active { transform: translateY(2px); box-shadow: 0 4px 5px rgba(0,0,0,0.2); }
@@ -232,10 +268,11 @@
             background: rgba(62, 39, 35, 0.8); z-index: 100;
             display: none; justify-content: center; align-items: center;
             backdrop-filter: blur(8px);
+            padding: 20px;
         }
         .modal-content {
-            background: #fff8e1; width: 90%; max-width: 420px;
-            border-radius: 40px; padding: 40px; text-align: center;
+            background: #fff8e1; width: 100%; max-width: 420px;
+            border-radius: 40px; padding: 30px; text-align: center;
             box-shadow: 0 20px 50px rgba(0,0,0,0.6);
             border: 8px solid #ffca28;
             animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -244,10 +281,10 @@
         /* MODALE LIVELLO EROE */
         .level-up-card {
             background: linear-gradient(135deg, #fff59d 0%, #fbc02d 100%);
-            border: 15px solid var(--velvet-red);
-            width: 90%; max-width: 450px;
+            border: 10px solid var(--velvet-red);
+            width: 100%; max-width: 450px;
             border-radius: 20px;
-            padding: 30px;
+            padding: 25px;
             text-align: center;
             color: var(--dark-ink);
             box-shadow: 
@@ -275,13 +312,13 @@
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
         
         .reward-icon-container {
-            width: 110px; height: 110px; background: white;
+            width: 90px; height: 90px; background: white;
             border-radius: 50%; margin: 0 auto 20px;
             display: flex; align-items: center; justify-content: center;
-            font-size: 3.5em; box-shadow: 0 10px 20px rgba(255, 202, 40, 0.3);
+            font-size: 3em; box-shadow: 0 10px 20px rgba(255, 202, 40, 0.3);
         }
-        .reward-title { font-family: 'MedievalSharp'; font-size: 1.8em; margin-bottom: 10px; color: #5d4037; }
-        .reward-desc { color: #8d6e63; margin-bottom: 25px; line-height: 1.5; font-weight: bold; }
+        .reward-title { font-family: 'MedievalSharp'; font-size: 1.6em; margin-bottom: 10px; color: #5d4037; }
+        .reward-desc { color: #8d6e63; margin-bottom: 25px; line-height: 1.5; font-weight: bold; font-size: 0.9em; }
         
         .btn-modal {
             background: linear-gradient(to bottom, #66bb6a, #43a047); color: white; 
@@ -290,7 +327,6 @@
             cursor: pointer; width: 100%; transition: 0.2s;
             box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
         }
-        .btn-modal:hover { transform: translateY(-2px); filter: brightness(1.1); }
         
         .btn-velvet {
             background: linear-gradient(to bottom, #8a1c1c, #630f0f);
@@ -314,7 +350,7 @@
             border-radius: 15px;
             padding: 20px;
             margin-bottom: 30px;
-            width: 80%;
+            width: 90%; max-width: 350px;
             border: 1px solid rgba(255,255,255,0.2);
             text-align: left;
         }
@@ -332,13 +368,13 @@
 
 <div class="main-wrapper">
     
-    <!-- SINISTRA -->
+    <!-- SINISTRA (Su Mobile va in basso) -->
     <div class="card history-panel">
-        <div class="history-title">Cronache del Regno</div>
+        <div class="history-title">Cronache</div>
         <div class="log-list" id="logList"></div>
     </div>
 
-    <!-- DESTRA -->
+    <!-- DESTRA (Su Mobile va in alto) -->
     <div class="card game-panel" id="gamePanel">
         
         <div style="text-align:center; margin-bottom:15px; font-family:'MedievalSharp'; font-size:1.6em; color:#7b1fa2; display:none; text-shadow: 0 2px 10px rgba(123, 31, 162, 0.3);" id="bossAlert">👹 SCONTRO LEGGENDARIO</div>
@@ -349,16 +385,16 @@
                     Eroe <span style="font-size:0.7em; color:#8d6e63; margin-left:5px;">Lv.1</span>
                 </div>
                 <div class="hp-bar-container"><div class="hp-fill" id="hpBarPlayer" style="width: 100%;"></div></div>
-                <div style="display:flex; justify-content:space-between; font-size:0.8em; margin-top:8px; font-weight:bold; color:#6d4c41;">
+                <div style="display:flex; justify-content:space-between; font-size:0.8em; margin-top:5px; font-weight:bold; color:#6d4c41;">
                     <span><span id="hpPlayer">25</span>/<span id="hpMaxPlayer">25</span> PV</span>
-                    <span>Turno: <span id="roundCounter">1</span></span>
+                    <span>T: <span id="roundCounter">1</span></span>
                 </div>
             </div>
             <div class="vs-divider">VS</div>
             <div class="fighter-stat">
                 <div class="fighter-name" id="enemyName">Nemico</div>
                 <div class="hp-bar-container"><div class="hp-fill enemy" id="hpBarEnemy" style="width: 100%;"></div></div>
-                <div style="font-size:0.8em; margin-top:8px; font-weight:bold; color:#6d4c41;"><span id="hpEnemy">20</span>/<span id="hpMaxEnemy">20</span> PV</div>
+                <div style="font-size:0.8em; margin-top:5px; font-weight:bold; color:#6d4c41;"><span id="hpEnemy">20</span>/<span id="hpMaxEnemy">20</span> PV</div>
             </div>
         </div>
 
@@ -372,7 +408,7 @@
                     <span class="combo-flame">🔥</span>
                     <span class="combo-flame">🔥</span>
                 </div>
-                <div class="combo-text" id="comboText">COMBO ATTIVA!</div>
+                <div class="combo-text" id="comboText">COMBO!</div>
             </div>
         </div>
 
@@ -392,12 +428,12 @@
             <div class="shop-item" id="shopPotion" onclick="buyItem('potion')">
                 <span class="item-emoji">🧪</span>
                 <span class="item-price">30 💰</span>
-                <span class="item-desc">+2 Tocco Magico</span>
+                <span class="item-desc">+2 Tocco</span>
             </div>
             <div class="shop-item" id="shopShield" onclick="buyItem('shield')">
                 <span class="item-emoji">🛡️</span>
                 <span class="item-price">25 💰</span>
-                <span class="item-desc">Egida Divina</span>
+                <span class="item-desc">Egida</span>
             </div>
         </div>
 
@@ -432,12 +468,12 @@
             <p style="margin-bottom:20px; font-size:1.1em; color:#d7ccc8;">Il tuo viaggio termina qui...</p>
             
             <div class="report-box">
-                <div class="report-line"><span>Eroe Livello:</span> <span class="report-val" id="endLevel">1</span></div>
-                <div class="report-line"><span>Monete Totali:</span> <span class="report-val" id="endGold">0</span></div>
-                <div class="report-line"><span>Round Sopravvissuti:</span> <span class="report-val" id="endRounds">0</span></div>
+                <div class="report-line"><span>Livello Eroe:</span> <span class="report-val" id="endLevel">1</span></div>
+                <div class="report-line"><span>Monete:</span> <span class="report-val" id="endGold">0</span></div>
+                <div class="report-line"><span>Round:</span> <span class="report-val" id="endRounds">0</span></div>
             </div>
 
-            <button class="btn-style" onclick="initGame()" style="width:auto; padding:15px 50px; background:#5d4037;">Nuova Avventura</button>
+            <button class="btn-style" onclick="initGame()" style="width:100%; padding:15px; background:#5d4037;">Nuova Avventura</button>
         </div>
 
     </div>
@@ -512,8 +548,6 @@
         if (lvl === 4) return { hp: 45, die: 8 };
         if (lvl === 5) return { hp: 45, die: 10 };
         if (lvl === 6) return { hp: 50, die: 10 }; // Boss
-        
-        // > Livello 6: +10 PV per livello, dado diventa d12
         return { hp: 50 + ((lvl - 6) * 10), die: 12 };
     }
 
@@ -525,38 +559,31 @@
         if (lvl === 4) return { maxHp: 40, die: 8 };
         if (lvl === 5) return { maxHp: 45, die: 10 };
         if (lvl === 6) return { maxHp: 50, die: 10 };
-        
-        // > Livello 6: +5 PV per livello, dado resta d10
         return { maxHp: 50 + ((lvl - 6) * 5), die: 10 };
     }
 
     function initGame() {
-        // 1. Reset variabili numeriche
         gold = 50; level = 1; streak = 0; chestCount = 0;
         totalRounds = 1; 
         heroLevel = 1;
 
-        // 2. Reset statistiche Eroe
         let stats = getHeroStats(1);
         maxHpPlayer = stats.maxHp;
         hpPlayer = maxHpPlayer;
 
-        // 3. Reset Items & Effetti
         items = { potion: false, shield: false };
         resetEffects(); 
 
-        // 4. Reset Interfaccia (PULIZIA TOTALE)
         document.getElementById('logList').innerHTML = '';
         document.getElementById('overlay').style.display = 'none';
         document.getElementById('heroLevelModal').style.display = 'none';
         document.getElementById('chestModal').style.display = 'none';
+        document.getElementById('levelUpModal').style.display = 'none'; 
         
-        // 5. Ripristino pulsanti (CRUCIALE)
         document.getElementById('btnAttack').style.display = 'block';
         document.getElementById('btnAttack').disabled = false;
         document.getElementById('chestActions').style.display = 'none';
 
-        // 6. Reset visivo items e start
         updateShopUI(); 
         updateMarkers();
         startNewLevel(true); 
@@ -568,23 +595,17 @@
     }
 
     function startNewLevel(isFirst) {
-        // Boss ogni 3 livelli
         let isBoss = (level % 3 === 0);
-        
         let eStats = getEnemyStats(level);
         maxHpEnemy = eStats.hp;
         hpEnemy = maxHpEnemy;
 
-        // Visualizza dado nemico
         document.getElementById('diceLabelEnemy').textContent = `1d${eStats.die}`;
 
-        // Reset HP completi solo quando si cambia nemico (livello di gioco)
         if (!isFirst) hpPlayer = maxHpPlayer; 
-        
         round = 1;
 
         document.getElementById('enemyName').textContent = isBoss ? "BOSS ANCIENT" : `Nemico Lv.${level}`;
-        
         const panel = document.getElementById('gamePanel');
         const alert = document.getElementById('bossAlert');
         
@@ -601,34 +622,21 @@
     // --- LOGICA LIVELLO EROE ---
     function checkHeroLevel() {
         let calculatedLevel = Math.floor((totalRounds - 1) / 20) + 1;
-        
         if (calculatedLevel > heroLevel) {
-            
-            // 1. Salva HP attuali prima dell'upgrade
             let currentHp = hpPlayer;
-
-            // 2. Aumenta Livello e Max HP
             heroLevel = calculatedLevel;
             let newStats = getHeroStats(heroLevel);
             maxHpPlayer = newStats.maxHp;
 
-            // 3. ORO
             let foundGold = Math.floor(Math.random() * 50) + 50; 
             gold += foundGold;
 
-            // 4. CURA STRATEGICA (70% dei PV ATTUALI)
             let healAmount = Math.floor(currentHp * 0.7); 
-            
-            // Applica cura ma non superare il nuovo massimo
             hpPlayer = Math.min(maxHpPlayer, currentHp + healAmount);
 
             showHeroLevelModal(heroLevel, foundGold, healAmount);
         }
-        
-        // Aggiorna etichetta Nome
         document.getElementById('heroNameDisplay').innerHTML = `Eroe <span style="font-size:0.7em; color:#8d6e63; margin-left:5px;">Lv.${heroLevel}</span>`;
-        
-        // Aggiorna etichetta Dadi Eroe
         let hStats = getHeroStats(heroLevel);
         document.getElementById('diceLabelPlayer').textContent = `1d${hStats.die}`;
     }
@@ -645,6 +653,13 @@
         updateUI();
     }
 
+    // --- UTILS PER ANIMAZIONI ---
+    function triggerShake() {
+        const gp = document.getElementById('gamePanel');
+        gp.classList.add('shake-effect');
+        setTimeout(() => { gp.classList.remove('shake-effect'); }, 500);
+    }
+
     // --- COMBAT ---
     function combatTurn() {
         document.getElementById('btnAttack').disabled = true;
@@ -654,17 +669,18 @@
     }
 
     function resolveCombat() {
-        // Dati attuali
         let hStats = getHeroStats(heroLevel);
         let eStats = getEnemyStats(level);
+        
+        // Tiri Dadi Originali
+        let rawRollP = Math.floor(Math.random() * hStats.die) + 1;
+        let rawRollE = Math.floor(Math.random() * eStats.die) + 1;
+        
+        let rollP = rawRollP;
+        let rollE = rawRollE;
 
-        // Tiro Eroe (Singolo dado aggiornato)
-        let rollP = Math.floor(Math.random() * hStats.die) + 1;
-
-        // Tiro Nemico
-        let rollE = Math.floor(Math.random() * eStats.die) + 1;
-
-        if (vineTrap) { rollP = 0; vineTrap = false; updateStatusIcons(); }
+        // Gestione Trap & Pozione (Modificano il valore finale, ma conserviamo i raw per il controllo Open Roll)
+        if (vineTrap) { rollP = 0; rawRollP = 0; vineTrap = false; updateStatusIcons(); }
         if (items.potion && rollP > 0) { rollP += 2; items.potion = false; }
 
         document.getElementById('dadoPlayer').textContent = rollP;
@@ -672,45 +688,73 @@
         updateShopUI(); updateMarkers();
 
         let difference = Math.abs(rollP - rollE);
+        
+        // --- LOGICA OPEN ROLL (TIRO APERTO) ---
+        // Condizione: Attaccante fa MAX del suo dado E Difensore fa 1
+        let isOpenRollPlayer = (rawRollP === hStats.die && rawRollE === 1);
+        let isOpenRollEnemy = (rawRollE === eStats.die && rawRollP === 1);
 
         if (rollP > rollE) {
             streak++; 
             chestCount = Math.min(5, chestCount + 1);
-            
             let mult = 1;
-            if (streak >= 5) mult = 4; else if (streak >= 3) mult = 1.5;
             
+            // Logica Open Roll Player
+            if (isOpenRollPlayer) {
+                mult = 2; // Raddoppia base
+                triggerShake(); // Effetto visivo
+            }
+            
+            // Combo Multipliers si applicano DOPO
+            let comboMult = 1;
+            if (streak >= 5) comboMult = 4; else if (streak >= 3) comboMult = 1.5;
+            mult = mult * comboMult;
+
             if (nextTurnMultiplier > 1) { mult *= nextTurnMultiplier; nextTurnMultiplier = 1; updateStatusIcons(); }
 
             let dmg = Math.floor(difference * mult);
             hpEnemy -= dmg; gold += dmg;
             
-            let comboMsg = mult > 1 ? ` (Critico x${mult})` : "";
-            addLog("Inflitto", `-${dmg} PV${comboMsg}`, "dmg-deal");
+            let extraTxt = "";
+            if(isOpenRollPlayer) extraTxt = " (TIRO APERTO!)";
+            else if(comboMult > 1) extraTxt = ` (Crit x${comboMult})`;
+
+            addLog("Inflitto", `-${dmg} HP${extraTxt}`, isOpenRollPlayer ? "critical" : "dmg-deal");
 
         } else if (rollP < rollE) {
             streak = 0;
             if (mirrorEffect) {
-                hpEnemy -= difference; mirrorEffect = false; updateStatusIcons();
-                addLog("Specchio Arcano", `Rifletti ${difference}`, "chest");
+                // Specchio riflette danno, incluso Open Roll nemico se attivo
+                let dmg = difference;
+                if(isOpenRollEnemy) { dmg *= 2; triggerShake(); }
+                
+                hpEnemy -= dmg; mirrorEffect = false; updateStatusIcons();
+                addLog("Specchio", `Rifletti ${dmg}`, "chest");
             } else {
                 let dmg = difference;
+                
+                // Logica Open Roll Enemy
+                if (isOpenRollEnemy) {
+                    dmg *= 2; // Raddoppia base
+                    triggerShake();
+                }
+
                 if (items.shield) { 
                     dmg = 0; items.shield = false; 
                     updateShopUI(); updateMarkers();
-                    addLog("Egida Divina", "Colpo Parato!", "chest");
+                    addLog("Egida", "Parato!", "chest");
                 }
+                
                 hpPlayer -= dmg;
-                if(dmg > 0) addLog("Colpito", `-${dmg} PV`, "dmg-take");
+                let extraTxt = isOpenRollEnemy ? " (TIRO APERTO!)" : "";
+                if(dmg > 0) addLog("Colpito", `-${dmg} HP${extraTxt}`, isOpenRollEnemy ? "critical" : "dmg-take");
             }
         } else {
             streak = 0; addLog("Schivata", " - ", "draw");
         }
 
-        round++; 
-        totalRounds++;
+        round++; totalRounds++;
         checkHeroLevel();
-
         updateUI();
         if (checkWin()) return;
 
@@ -730,19 +774,19 @@
 
         if (rand < 50) { 
             let g = Math.floor(Math.random() * 30) + 30; gold += g;
-            t = "Antico Tesoro"; d = `Hai trovato +${g} Monete d'Oro`; e = "💰";
+            t = "Tesoro"; d = `+${g} Monete`; e = "💰";
         } 
         else if (rand < 75) { 
-            nextTurnMultiplier = 2; t = "Furia Cieca"; d = "Il prossimo attacco infligge danno DOPPIO"; e = "⚔️";
+            nextTurnMultiplier = 2; t = "Furia"; d = "Prox attacco x2"; e = "⚔️";
         } 
         else if (rand < 85) { 
-            nextTurnMultiplier = 3; t = "Potere Divino"; d = "Il prossimo attacco infligge danno TRIPLO"; e = "⚡";
+            nextTurnMultiplier = 3; t = "Potere"; d = "Prox attacco x3"; e = "⚡";
         } 
         else if (rand < 95) { 
-            mirrorEffect = true; t = "Specchio Magico"; d = "Rifletti il prossimo danno subito al nemico"; e = "🪞";
+            mirrorEffect = true; t = "Specchio"; d = "Rifletti danno"; e = "🪞";
         } 
         else { 
-            vineTrap = true; t = "Radici Maledette"; d = "Sei bloccato. Il tuo prossimo tiro sarà 0."; e = "🌿";
+            vineTrap = true; t = "Radici"; d = "Prox tiro 0"; e = "🌿";
         }
 
         showChestReward(t, d, e);
@@ -777,11 +821,9 @@
             return true;
         }
         if (hpPlayer <= 0) {
-            // POPOLAMENTO REPORT FINALE
             document.getElementById('endLevel').textContent = heroLevel;
             document.getElementById('endGold').textContent = gold;
             document.getElementById('endRounds').textContent = totalRounds - 1;
-
             document.getElementById('overlay').style.display = 'flex';
             return true;
         }
@@ -790,7 +832,7 @@
 
     function showLevelUpModal() {
         document.getElementById('levelUpTitle').textContent = "GLORIA!";
-        document.getElementById('levelUpDesc').textContent = "Il nemico è caduto. Sei pronto per la prossima sfida?";
+        document.getElementById('levelUpDesc').textContent = "Nemico sconfitto!";
         document.getElementById('btnBonusChest').style.display = 'inline-block';
         document.getElementById('btnNextLevel').style.display = 'none';
         document.getElementById('levelUpModal').style.display = 'flex';
@@ -867,14 +909,13 @@
         });
         if (streak >= 3) {
             txt.style.display = 'block';
-            if (streak >= 5) txt.textContent = "COMBO MASSIMA (x4)";
-            else if (streak >= 4) txt.textContent = "COMBO DOPPIA (x2)";
-            else txt.textContent = "COMBO (x1.5)";
+            if (streak >= 5) txt.textContent = "MAX!";
+            else if (streak >= 4) txt.textContent = "x2";
+            else txt.textContent = "x1.5";
         } else {
             txt.style.display = 'none';
         }
 
-        // Assicurati che le etichette dadi siano aggiornate anche al resize o refresh UI
         let hStats = getHeroStats(heroLevel);
         document.getElementById('diceLabelPlayer').textContent = `1d${hStats.die}`;
     }
