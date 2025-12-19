@@ -579,6 +579,8 @@
 <audio id="sfxLevelUp" src="https://ste388.github.io/DiceRPG/fx/levelUP.mp3" preload="auto"></audio>
 <audio id="bgMusic" src="https://ste388.github.io/DiceRPG/fx/sottofondo.mp3" preload="auto" loop></audio>
 <audio id="sfxChest" src="https://ste388.github.io/DiceRPG/fx/cesta.mp3" preload="auto"></audio>
+<audio id="sfxFlame" src="https://ste388.github.io/DiceRPG/fx/fiamma.mp3" preload="auto"></audio>
+<audio id="sfxSkull" src="https://ste388.github.io/DiceRPG/fx/scheletro.mp3" preload="auto"></audio>
 
 
 <!-- PULSANTE MUTE -->
@@ -819,7 +821,7 @@
 <script>
     // --- SETUP GLOBALE ---
     let hpPlayer, maxHpPlayer, hpEnemy, maxHpEnemy, gold, level, streak, chestCount, round, totalRounds;
-	let enemyStreak = 0; // <--- NUOVA VARIABILE
+    let enemyStreak = 0;
     let heroLevel = 1;
     let items = { potion: 0, shield: 0 };
     
@@ -832,6 +834,59 @@
     let enemyNextTurnMultiplier = 1;
     let enemyMirrorEffect = false;
     let heroVineTrap = false;
+    
+    // Musica Sottofondo
+    let bgStarted = false;
+
+    // --- UTILS AUDIO ---
+    function startBackgroundMusic() {
+        if (bgStarted) return;
+        const bg = document.getElementById('bgMusic');
+        if (!bg) return;
+        bgStarted = true;
+        bg.volume = 0.18; 
+        bg.loop = true;
+        if (!bg.muted) {
+            bg.play().catch(() => { bgStarted = false; });
+        }
+    }
+
+    function toggleMusic() {
+        const bg = document.getElementById('bgMusic');
+        const btn = document.getElementById('muteBtn');
+        if (bg.muted) {
+            bg.muted = false; btn.innerHTML = "🔊";
+            if (bg.paused && bgStarted) bg.play().catch(()=>{});
+        } else {
+            bg.muted = true; btn.innerHTML = "🔇";
+        }
+    }
+
+    function playFightSfx() {
+        const a = document.getElementById('sfxFight');
+        if (a) { a.currentTime = 0; a.volume = 0.8; a.play().catch(()=>{}); }
+    }
+
+    function playParrySfx() {
+        const a = document.getElementById('sfxParry');
+        if (a) { a.currentTime = 0; a.volume = 0.9; a.play().catch(()=>{}); }
+    }
+
+    function playHitSound(damage, isCritOrOpenRoll, dieMax) {
+        let soundId = 'sfxSword1'; 
+        if (isCritOrOpenRoll) {
+            soundId = 'sfxSword5'; 
+        } else {
+            let ratio = damage / dieMax;
+            if (ratio >= 0.8) soundId = 'sfxSword5';
+            else if (ratio >= 0.6) soundId = 'sfxSword4';
+            else if (ratio >= 0.45) soundId = 'sfxSword3';
+            else if (ratio >= 0.25) soundId = 'sfxSword2';
+            else soundId = 'sfxSword1';
+        }
+        const audio = document.getElementById(soundId);
+        if (audio) { audio.currentTime = 0; audio.volume = 0.6; audio.play().catch(()=>{}); }
+    }
 
     // --- CONFIGURAZIONE ---
     function getEnemyStats(lvl) {
@@ -854,34 +909,19 @@
         return { maxHp: 50 + ((lvl - 6) * 5), die: 10 };
     }
 
+    // --- INIT ---
     function initGame() {
-	
-		const bg = document.getElementById('bgMusic');
-			if (bg) { bg.pause(); bg.currentTime = 0; }
-			bgStarted = false;
-	
-        // 1. Reset Variabili Base
-		enemyStreak = 0;
-        gold = 50; 
-        level = 1; 
-        streak = 0; 
-        chestCount = 0;
-        totalRounds = 1; 
-        heroLevel = 1;
+        gold = 50; level = 1; streak = 0; chestCount = 0;
+        totalRounds = 1; heroLevel = 1; enemyStreak = 0;
 
-        // 2. FIX VISIVO: Aggiorniamo subito il testo del livello
         document.getElementById('heroNameDisplay').innerHTML = `Eroe <span style="font-size:0.7em; color:#8d6e63; margin-left:5px;">Lv.${heroLevel}</span>`;
-
-        // 3. CALCOLO STATISTICHE (Queste erano le righe probabilmente mancanti!)
+        
         let stats = getHeroStats(1);
-        maxHpPlayer = stats.maxHp;
-        hpPlayer = maxHpPlayer;
+        maxHpPlayer = stats.maxHp; hpPlayer = maxHpPlayer;
 
-        // 4. Reset Oggetti ed Effetti
         items = { potion: 0, shield: 0 };
         resetEffects(); 
 
-        // 5. Pulizia Interfaccia
         document.getElementById('logList').innerHTML = '';
         document.getElementById('overlay').style.display = 'none';
         document.getElementById('heroLevelModal').style.display = 'none';
@@ -894,73 +934,14 @@
         document.getElementById('btnAttack').disabled = false;
         document.getElementById('chestActions').style.display = 'none';
 
-        // 6. Avvio Partita
-        updateShopUI(); 
-        updateMarkers();
-        startNewLevel(true); 
-        updateUI();
-    }
-
-
-    let bgStarted = false;
-
-    function startBackgroundMusic() {
-        if (bgStarted) return;
+        // Reset Musica
         const bg = document.getElementById('bgMusic');
-        if (!bg) return;
+        if (bg) { bg.pause(); bg.currentTime = 0; }
+        bgStarted = false;
 
-        bgStarted = true;
-        bg.volume = 0.18; // Volume basso
-        bg.loop = true;
-
-        // Se l'utente non ha premuto MUTE, fai partire
-        if (!bg.muted) {
-            bg.play().catch(() => {
-                // Se fallisce (blocco browser), riprova al prossimo click
-                bgStarted = false; 
-            });
-        }
+        updateShopUI(); updateMarkers();
+        startNewLevel(true); updateUI();
     }
-
-
-     function playHitSound(damage, isCritOrOpenRoll, dieMax) {
-        let soundId = 'sfxSword1'; // Default: colpo di striscio
-
-        if (isCritOrOpenRoll) {
-            soundId = 'sfxSword5'; // I critici sono sempre il massimo
-        } else {
-            // Calcoliamo la potenza del colpo in % rispetto al dado usato
-            // Esempio con d6:
-            // 1 danno  = 16% -> Spada 1
-            // 2 danni = 33% -> Spada 2
-            // 3 danni = 50% -> Spada 3
-            // 4 danni = 66% -> Spada 4
-            // 5+ danni (Combo) -> Spada 5
-            
-            let ratio = damage / dieMax;
-
-            if (ratio >= 0.8) {          // Es: 5 o 6 su d6, oppure 10 su d12
-                soundId = 'sfxSword5';
-            } else if (ratio >= 0.6) {   // Es: 4 su d6, oppure 8 su d12
-                soundId = 'sfxSword4';
-            } else if (ratio >= 0.45) {  // Es: 3 su d6, oppure 6 su d12
-                soundId = 'sfxSword3';
-            } else if (ratio >= 0.25) {  // Es: 2 su d6, oppure 3 su d12
-                soundId = 'sfxSword2';
-            } else {                     // Es: 1 su d6
-                soundId = 'sfxSword1';
-            }
-        }
-
-        const audio = document.getElementById(soundId);
-        if (audio) {
-            audio.currentTime = 0;
-            audio.volume = 0.6; 
-            audio.play().catch(e => console.log("Audio play failed:", e));
-        }
-    }
-
-
 
     function resetEffects() {
         nextTurnMultiplier = 1; mirrorEffect = false; vineTrap = false; 
@@ -968,77 +949,34 @@
         updateStatusIcons();
     }
 
-function toggleMusic() {
-        const bg = document.getElementById('bgMusic');
-        const btn = document.getElementById('muteBtn');
+    function startNewLevel(isFirst) {
+        let isBoss = (level % 3 === 0);
+        let eStats = getEnemyStats(level);
+        maxHpEnemy = eStats.hp; hpEnemy = maxHpEnemy;
+
+        document.getElementById('diceLabelEnemy').textContent = `1d${eStats.die}`;
+
+        if (!isFirst) hpPlayer = maxHpPlayer; 
+        round = 1; enemyStreak = 0;
+
+        document.getElementById('enemyName').textContent = isBoss ? "BOSS ANCIENT" : `Nemico Lv.${level}`;
+        const panel = document.getElementById('gamePanel');
+        const alert = document.getElementById('bossAlert');
         
-        if (bg.muted) {
-            bg.muted = false;
-            btn.innerHTML = "🔊"; // Icona volume alto
-            // Se la musica non era partita (perché bloccata), prova a farla partire ora
-            if (bg.paused && bgStarted) { 
-                bg.play().catch(e => console.log("Music play error:", e));
-            }
-        } else {
-            bg.muted = true;
-            btn.innerHTML = "🔇"; // Icona muto
-        }
+        if(isBoss) { panel.classList.add('boss-mode'); alert.style.display = 'block'; } 
+        else { panel.classList.remove('boss-mode'); alert.style.display = 'none'; }
+        
+        playFightSfx();
+        updateUI();
     }
 
-function startNewLevel(isFirst) {
-    let isBoss = (level % 3 === 0);
-    let eStats = getEnemyStats(level);
-    maxHpEnemy = eStats.hp;
-    hpEnemy = maxHpEnemy;
-
-    document.getElementById('diceLabelEnemy').textContent = `1d${eStats.die}`;
-
-    if (!isFirst) hpPlayer = maxHpPlayer;
-    round = 1;
-
-    document.getElementById('enemyName').textContent = isBoss ? "BOSS ANCIENT" : `Nemico Lv.${level}`;
-    const panel = document.getElementById('gamePanel');
-    const alert = document.getElementById('bossAlert');
-
-    if (isBoss) { panel.classList.add('boss-mode'); alert.style.display = 'block'; }
-    else { panel.classList.remove('boss-mode'); alert.style.display = 'none'; }
-
-    playFightSfx();   // <-- QUI: parte il “via alla battaglia”
-    updateUI();
-}
-
-function playFightSfx() {
-        const fightAudio = document.getElementById('sfxFight');
-        if (fightAudio) {
-            fightAudio.currentTime = 0; // Riavvolgi
-            fightAudio.volume = 0.8;    // Volume 80%
-            fightAudio.play().catch(e => console.log("Audio Fight error:", e));
-        }
-    }
-	
-	function playParrySfx() {
-    const a = document.getElementById('sfxParry');
-    if (!a) return;
-    a.pause();
-    a.currentTime = 0;
-    a.volume = 0.9;
-    a.play().catch(() => {});
-}
-	
     // --- COMBAT FLOW ---
-    
     function resolveCombatStart() {
-	
-	startBackgroundMusic(); // <-- avvia sottofondo al primo attacco
-	
-	    // 1. Play Suono Dado (Reset e Play)
+        startBackgroundMusic(); // Avvia musica al primo click
+
         const diceSfx = document.getElementById('sfxDiceRoll');
-        if (diceSfx) {
-            diceSfx.currentTime = 0;
-            diceSfx.volume = 0.8; // Volume ben udibile
-            diceSfx.play().catch(e => console.log("Dice sfx error:", e));
-        }
-		
+        if (diceSfx) { diceSfx.currentTime = 0; diceSfx.volume = 0.8; diceSfx.play().catch(()=>{}); }
+
         document.getElementById('btnAttack').disabled = true;
         document.getElementById('dadoPlayer').textContent = '...'; 
         document.getElementById('dadoEnemy').textContent = '...';
@@ -1056,87 +994,56 @@ function playFightSfx() {
         
         let rawRollP = Math.floor(Math.random() * hStats.die) + 1;
         let rawRollE = Math.floor(Math.random() * eStats.die) + 1;
-        
-        let rollP = rawRollP;
-        let rollE = rawRollE;
+        let rollP = rawRollP; let rollE = rawRollE;
 
-        // Gestione Trappole (Bonus e Malus)
-        if (vineTrap) {
-            rollP = 0; rawRollP = 0; vineTrap = false; 
-            updateStatusIcons();
-        }
-        if (heroVineTrap) {
-            rollP = 0; rawRollP = 0; heroVineTrap = false;
-            addLog("Edera Nera", "Il tuo dado è bloccato!", "malus");
-            updateStatusIcons();
-        }
+        // Trappole
+        if (vineTrap) { rollP = 0; rawRollP = 0; vineTrap = false; updateStatusIcons(); }
+        if (heroVineTrap) { rollP = 0; rawRollP = 0; heroVineTrap = false; addLog("Edera Nera", "Il tuo dado è bloccato!", "malus"); updateStatusIcons(); }
 
         document.getElementById('dadoPlayer').textContent = rollP;
         document.getElementById('dadoEnemy').textContent = rollE;
 
-        // --- ANIMAZIONE POZIONE (Modifica il tiro) ---
+        // Pozione
         if (items.potion > 0 && rollP > 0) {
             const marker = document.getElementById('markerPotion');
             const diceEl = document.getElementById('dadoPlayer');
-            
             marker.classList.add('fly-to-center');
-            
             setTimeout(() => {
-                let bonus = items.potion;
-                items.potion = 0; 
+                let bonus = items.potion; items.potion = 0; 
                 rollP += bonus;
-                
-                diceEl.textContent = rollP;
-                diceEl.classList.add('dado-boosted');
-                
-                marker.style.display = 'none';
-                marker.classList.remove('fly-to-center'); 
+                diceEl.textContent = rollP; diceEl.classList.add('dado-boosted');
+                marker.style.display = 'none'; marker.classList.remove('fly-to-center'); 
                 updateShopUI();
-
-                setTimeout(() => {
-                    finalizeCombat(rollP, rollE, rawRollP, rawRollE);
-                }, 500);
-
+                setTimeout(() => { finalizeCombat(rollP, rollE, rawRollP, rawRollE); }, 500);
             }, 600);
             return;
         }
-
         finalizeCombat(rollP, rollE, rawRollP, rawRollE);
     }
 
     function finalizeCombat(rollP, rollE, rawRollP, rawRollE) {
-        // Se il giocatore PERDE e ha lo SCUDO attivo
         if (rollP < rollE && items.shield > 0) {
             return triggerShieldAnimation(rollP, rollE, rawRollP, rawRollE);
         }
-
         applyDamageAndLog(rollP, rollE, rawRollP, rawRollE);
     }
 
     function triggerShieldAnimation(rollP, rollE, rawRollP, rawRollE) {
         const marker = document.getElementById('markerShield');
         const gamePanel = document.getElementById('gamePanel');
-        
         marker.classList.add('shield-block-anim');
-
         setTimeout(() => {
             let sVal = items.shield;
             let txt = sVal >= 999 ? "BLOCKED!" : `-${sVal}`;
-            
             let floatTxt = document.createElement('div');
-            floatTxt.className = 'parry-text';
-            floatTxt.innerText = txt;
+            floatTxt.className = 'parry-text'; floatTxt.innerText = txt;
             gamePanel.appendChild(floatTxt);
-            
-            marker.style.display = 'none';
-            marker.classList.remove('shield-block-anim');
-            
+            marker.style.display = 'none'; marker.classList.remove('shield-block-anim');
             applyDamageAndLog(rollP, rollE, rawRollP, rawRollE, true); 
-            
         }, 600);
     }
 
-     function applyDamageAndLog(rollP, rollE, rawRollP, rawRollE, shieldUsed = false) {
+    function applyDamageAndLog(rollP, rollE, rawRollP, rawRollE, shieldUsed = false) {
         let hStats = getHeroStats(heroLevel);
         let eStats = getEnemyStats(level);
         let difference = Math.abs(rollP - rollE);
@@ -1146,17 +1053,24 @@ function playFightSfx() {
 
         if (rollP > rollE) {
             // --- VITTORIA EROE ---
-            streak++; 
-            enemyStreak = 0;
-            
+            streak++; enemyStreak = 0;
             chestCount = Math.min(5, chestCount + 1);
+            
+            // Audio Fiamma Crescendo
+            if (streak >= 3) {
+                const flameSfx = document.getElementById('sfxFlame');
+                if (flameSfx) {
+                    flameSfx.currentTime = 0;
+                    let vol = 0.5; if (streak === 4) vol = 0.8; if (streak >= 5) vol = 1.0;
+                    flameSfx.volume = vol;
+                    setTimeout(() => flameSfx.play().catch(()=>{}), 200);
+                }
+            }
+
             let mult = 1;
-            
             if (isOpenRollPlayer) { mult = 2; triggerShake(); }
-            
             let comboMult = 1;
-            if (streak >= 5) comboMult = 4; 
-            else if (streak >= 3) comboMult = 1.5;
+            if (streak >= 5) comboMult = 4; else if (streak >= 3) comboMult = 1.5;
             mult *= comboMult;
             
             if (nextTurnMultiplier > 1) { mult *= nextTurnMultiplier; nextTurnMultiplier = 1; updateStatusIcons(); }
@@ -1164,86 +1078,74 @@ function playFightSfx() {
             let dmg = Math.floor(difference * mult);
             
             if (enemyMirrorEffect) {
-                // Specchio Nero (Ti fai male tu)
                 enemyMirrorEffect = false; updateStatusIcons();
                 hpPlayer -= dmg;
                 addLog("Specchio Nero", `Danno riflesso! (-${dmg} HP)`, "malus");
-                
-                triggerBloodEffect(); 
-                // Qui il danno viene dalla magia nemica, usiamo il dado nemico come riferimento o max volume
-                playHitSound(dmg, false, hStats.die); 
-            } else {
-                // Danno al Nemico (Usi il TUO dado)
-                hpEnemy -= dmg; gold += dmg;
-                let extraTxt = isOpenRollPlayer ? " (TIRO APERTO!)" : (comboMult > 1 ? ` (Combo x${comboMult})` : "");
-                addLog("Inflitto", `-${dmg} HP${extraTxt}`, isOpenRollPlayer ? "critical" : "dmg-deal");
-                
                 triggerBloodEffect();
-                // Passiamo hStats.die così calcola la % sul tuo dado
-                playHitSound(dmg, isOpenRollPlayer, hStats.die); 
+                playHitSound(dmg, false, hStats.die);
+            } else {
+                hpEnemy -= dmg; gold += dmg;
+                let extraTxt = isOpenRollPlayer ? " (TIRO APERTO!)" : (comboMult > 1 ? ` (Crit x${comboMult})` : "");
+                addLog("Inflitto", `-${dmg} HP${extraTxt}`, isOpenRollPlayer ? "critical" : "dmg-deal");
+                triggerBloodEffect();
+                playHitSound(dmg, isOpenRollPlayer, hStats.die);
             }
 
         } else if (rollP < rollE) {
             // --- VITTORIA NEMICO ---
-            streak = 0; 
-            enemyStreak++; 
+            streak = 0; enemyStreak++;
             
+            // Audio Scheletro Crescendo
+            if (enemyStreak >= 3) {
+                const skullSfx = document.getElementById('sfxSkull');
+                if (skullSfx) {
+                    skullSfx.currentTime = 0;
+                    let vol = 0.6; if (enemyStreak === 4) vol = 0.9; if (enemyStreak >= 5) vol = 1.0;
+                    skullSfx.volume = vol;
+                    setTimeout(() => skullSfx.play().catch(()=>{}), 200);
+                }
+            }
+
             if (mirrorEffect) {
-                // Rifletti (Usi il dado nemico riflesso)
                 let dmg = difference;
                 if(isOpenRollEnemy) { dmg *= 2; triggerShake(); }
-                
-                hpEnemy -= dmg; 
-                mirrorEffect = false; updateStatusIcons();
+                hpEnemy -= dmg; mirrorEffect = false; updateStatusIcons();
                 addLog("Specchio", `Rifletti ${dmg}`, "chest");
-                
                 triggerBloodEffect();
-                playHitSound(dmg, isOpenRollEnemy, eStats.die); 
+                playHitSound(dmg, isOpenRollEnemy, eStats.die);
             } else {
                 let dmg = difference;
                 if (isOpenRollEnemy) { dmg *= 2; triggerShake(); }
 
                 let eComboMult = 1;
-                if (enemyStreak >= 5) eComboMult = 4; 
-                else if (enemyStreak >= 3) eComboMult = 1.5;
+                if (enemyStreak >= 5) eComboMult = 4; else if (enemyStreak >= 3) eComboMult = 1.5;
                 dmg = Math.floor(dmg * eComboMult);
 
                 if (enemyNextTurnMultiplier > 1) {
-                    dmg *= enemyNextTurnMultiplier;
-                    enemyNextTurnMultiplier = 1; updateStatusIcons();
+                    dmg *= enemyNextTurnMultiplier; enemyNextTurnMultiplier = 1; updateStatusIcons();
                 }
 
-				if (shieldUsed) {
-					let shieldVal = items.shield;
-
-					if (shieldVal >= 999) dmg = 0;
-					else dmg = Math.max(0, dmg - shieldVal);
-
-					items.shield = 0;
-					updateShopUI(); updateMarkers();
-
-					triggerShieldEffect();
-
-					// SUONO PARATA SOLO SE NON PERDI PV
-					if (dmg === 0) playParrySfx();
-
-					addLog("Egida", `Danno ridotto a ${dmg}`, "chest");
-				}
+                if (shieldUsed) {
+                    let shieldVal = items.shield;
+                    if (shieldVal >= 999) dmg = 0; else dmg = Math.max(0, dmg - shieldVal);
+                    items.shield = 0; 
+                    updateShopUI(); updateMarkers();
+                    triggerShieldEffect();
+                    if (dmg === 0) playParrySfx(); // Parata Totale Audio
+                    addLog("Egida", `Danno ridotto a ${dmg}`, "chest");
+                }
                 
                 if(dmg > 0) {
                     hpPlayer -= dmg;
                     let extraTxt = isOpenRollEnemy ? " (TIRO APERTO!)" : (eComboMult > 1 ? ` (Foga x${eComboMult})` : "");
                     addLog("Colpito", `-${dmg} HP${extraTxt}`, isOpenRollEnemy ? "critical" : "dmg-take");
-                    
                     triggerBloodEffect();
-                    // Il nemico ti colpisce: Passiamo eStats.die
-                    playHitSound(dmg, isOpenRollEnemy, eStats.die); 
+                    playHitSound(dmg, isOpenRollEnemy, eStats.die);
                 } else if(shieldUsed && dmg === 0) {
                     addLog("Parata", "Nessun Danno", "draw");
                 }
             }
         } else {
-            // --- PAREGGIO ---
             streak = 0; enemyStreak = 0;
             addLog("Schivata", " - ", "draw");
         }
@@ -1262,58 +1164,39 @@ function playFightSfx() {
         }
     }
 
+    // --- EFFECTS ---
+    const bloodImages = ["https://ste388.github.io/DiceRPG/img/sangue.png", "https://ste388.github.io/DiceRPG/img/sangue1.png", "https://ste388.github.io/DiceRPG/img/sangue2.png", "https://ste388.github.io/DiceRPG/img/sangue3.png", "https://ste388.github.io/DiceRPG/img/sangue4.png"];
+    function triggerBloodEffect() {
+        const overlay = document.getElementById('bloodOverlay'); const img = document.getElementById('bloodImage');
+        const rnd = Math.floor(Math.random() * bloodImages.length); img.src = bloodImages[rnd];
+        overlay.style.display = 'flex';
+        img.classList.remove('blood-img'); void img.offsetWidth; img.classList.add('blood-img');
+        setTimeout(() => { overlay.style.display = 'none'; }, 1000);
+    }
+    function triggerShieldEffect() {
+        const overlay = document.getElementById('shieldOverlay'); const img = document.getElementById('shieldImageDisplay');
+        overlay.style.display = 'flex';
+        img.classList.remove('blood-img'); void img.offsetWidth; img.classList.add('blood-img');
+        setTimeout(() => { overlay.style.display = 'none'; }, 1000);
+    }
 
     // --- LOGICA SCRIGNO & MALUS ---
     function openChest() {
-	
-	        // Play Suono Apertura Scrigno
         const chestSfx = document.getElementById('sfxChest');
-        if (chestSfx) {
-            chestSfx.currentTime = 0;
-            chestSfx.volume = 0.7;
-            chestSfx.play().catch(e => console.log("Chest sfx error:", e));
-        }
-	
+        if (chestSfx) { chestSfx.currentTime = 0; chestSfx.volume = 0.7; chestSfx.play().catch(()=>{}); }
+
         chestCount = 0;
         let rand = Math.random() * 100;
         let t, d, e, isMalus = false;
 
-        // 50% ORO (0-50)
-        if (rand < 50) { 
-            let g = Math.floor(Math.random() * 30) + 30; gold += g;
-            t = "Tesoro"; d = `+${g} Monete`; e = "💰";
-        }
-        // 12.5% FURIA (50 - 62.5)
-        else if (rand < 62.5) {
-            nextTurnMultiplier = 2; t = "Furia"; d = "Prox attacco x2"; e = "⚔️";
-        }
-        // 12.5% FORZA NEMICA (MALUS) (62.5 - 75)
-        else if (rand < 75) {
-            enemyNextTurnMultiplier = 2; isMalus = true;
-            t = "Forza Nemica"; d = "Nemico attacco x2"; e = "👹";
-        }
-        // 10% POTERE (75 - 85)
-        else if (rand < 85) {
-            nextTurnMultiplier = 3; t = "Potere"; d = "Prox attacco x3"; e = "⚡";
-        }
-        // 5% SPECCHIO (85 - 90)
-        else if (rand < 90) {
-            mirrorEffect = true; t = "Specchio"; d = "Rifletti danno"; e = "🪞";
-        }
-        // 5% SPECCHIO NERO (MALUS) (90 - 95)
-        else if (rand < 95) {
-            enemyMirrorEffect = true; isMalus = true;
-            t = "Specchio Nero"; d = "Nemico riflette danno"; e = "🖤";
-        }
-        // 2.5% RADICI (95 - 97.5)
-        else if (rand < 97.5) {
-            vineTrap = true; t = "Radici"; d = "Nemico dado 0"; e = "🌿";
-        }
-        // 2.5% EDERA NERA (MALUS) (97.5 - 100)
-        else {
-            heroVineTrap = true; isMalus = true;
-            t = "Edera Nera"; d = "Tuo dado 0"; e = "🥀";
-        }
+        if (rand < 50) { let g = Math.floor(Math.random() * 30) + 30; gold += g; t = "Tesoro"; d = `+${g} Monete`; e = "💰"; }
+        else if (rand < 62.5) { nextTurnMultiplier = 2; t = "Furia"; d = "Prox attacco x2"; e = "⚔️"; }
+        else if (rand < 75) { enemyNextTurnMultiplier = 2; isMalus = true; t = "Forza Nemica"; d = "Nemico attacco x2"; e = "👹"; }
+        else if (rand < 85) { nextTurnMultiplier = 3; t = "Potere"; d = "Prox attacco x3"; e = "⚡"; }
+        else if (rand < 90) { mirrorEffect = true; t = "Specchio"; d = "Rifletti danno"; e = "🪞"; }
+        else if (rand < 95) { enemyMirrorEffect = true; isMalus = true; t = "Specchio Nero"; d = "Nemico riflette danno"; e = "🖤"; }
+        else if (rand < 97.5) { vineTrap = true; t = "Radici"; d = "Nemico dado 0"; e = "🌿"; }
+        else { heroVineTrap = true; isMalus = true; t = "Edera Nera"; d = "Tuo dado 0"; e = "🥀"; }
 
         showChestReward(t, d, e, isMalus);
         updateStatusIcons(); updateUI();
@@ -1323,16 +1206,10 @@ function playFightSfx() {
 
     function showChestReward(t, d, e, isMalus) {
         const modal = document.getElementById('chestModalContent');
-        if(isMalus) modal.classList.add('malus-mode');
-        else modal.classList.remove('malus-mode');
-
-        document.getElementById('rewardTitle').textContent = t;
-        document.getElementById('rewardDesc').textContent = d;
-        document.getElementById('rewardEmoji').textContent = e;
+        if(isMalus) modal.classList.add('malus-mode'); else modal.classList.remove('malus-mode');
+        document.getElementById('rewardTitle').textContent = t; document.getElementById('rewardDesc').textContent = d; document.getElementById('rewardEmoji').textContent = e;
         document.getElementById('chestModal').style.display = 'flex';
     }
-
-    // --- GESTIONE MODALI UTILS ---
     function closeChestModal() { document.getElementById('chestModal').style.display = 'none'; document.getElementById('btnAttack').disabled = false; }
     function ignoreChest() { chestCount = 0; updateUI(); document.getElementById('chestActions').style.display = 'none'; document.getElementById('btnAttack').style.display = 'block'; document.getElementById('btnAttack').disabled = false; }
 
@@ -1358,17 +1235,10 @@ function playFightSfx() {
     }
 
     function showHeroLevelModal(lvl, g, h) {
-		// Play Suono Level Up Eroe
         const levelUpSfx = document.getElementById('sfxLevelUp');
-        if (levelUpSfx) {
-            levelUpSfx.currentTime = 0;
-            levelUpSfx.volume = 0.8;
-            levelUpSfx.play().catch(e => console.log("LevelUp sfx error:", e));
-        }
-        document.getElementById('heroLvlNum').innerText = lvl; 
-        document.getElementById('lvlGold').innerText = g;
-        document.getElementById('lvlHeal').innerText = h; 
-        document.getElementById('heroLevelModal').style.display = 'flex';
+        if (levelUpSfx) { levelUpSfx.currentTime = 0; levelUpSfx.volume = 0.8; levelUpSfx.play().catch(()=>{}); }
+        document.getElementById('heroLvlNum').innerText = lvl; document.getElementById('lvlGold').innerText = g;
+        document.getElementById('lvlHeal').innerText = h; document.getElementById('heroLevelModal').style.display = 'flex';
     }
     function closeHeroLevelModal() { document.getElementById('heroLevelModal').style.display = 'none'; updateUI(); }
 
@@ -1378,80 +1248,50 @@ function playFightSfx() {
     }
     
     function checkWin() {
-        if (hpEnemy <= 0) { hpEnemy = 0; updateUI(); addLog("Vittoria", "Livello Completato", "win"); setTimeout(showLevelUpModal, 500); return true; }
+        if (hpEnemy <= 0) { 
+            hpEnemy = 0; updateUI(); addLog("Vittoria", "Livello Completato", "win"); 
+            setTimeout(showLevelUpModal, 500); 
+            return true; 
+        }
         if (hpPlayer <= 0) {
             document.getElementById('endLevel').textContent = heroLevel; document.getElementById('endGold').textContent = gold;
             document.getElementById('endRounds').textContent = totalRounds - 1; document.getElementById('overlay').style.display = 'flex'; return true;
         } return false;
     }
     function showLevelUpModal() {
-	
-	        // Play Suono Morte Nemico
         const deathSfx = document.getElementById('sfxDeath');
-        if (deathSfx) {
-            deathSfx.currentTime = 0;
-            deathSfx.volume = 0.7;
-            deathSfx.play().catch(e => console.log("Death sfx error:", e));
-        }
-	
-        document.getElementById('levelUpTitle').textContent = "GLORIA!"; 
-        document.getElementById('levelUpDesc').textContent = "Nemico sconfitto!";
-        
-        // MOSTRA TASTO BONUS, NASCONDI NEXT
-        document.getElementById('btnBonusChest').style.display = 'inline-block'; 
-        document.getElementById('btnNextLevel').style.display = 'none';
-        
+        if (deathSfx) { deathSfx.currentTime = 0; deathSfx.volume = 0.7; deathSfx.play().catch(()=>{}); }
+        document.getElementById('levelUpTitle').textContent = "GLORIA!"; document.getElementById('levelUpDesc').textContent = "Nemico sconfitto!";
+        document.getElementById('btnBonusChest').style.display = 'inline-block'; document.getElementById('btnNextLevel').style.display = 'none';
         document.getElementById('levelUpModal').style.display = 'flex';
     }
-	
     function openLevelBonus() {
-        let bonusGold = Math.floor(Math.random() * 30) + 20; 
-        gold += bonusGold;
-        
-        // AGGIORNA TESTI
-        document.getElementById('levelUpTitle').textContent = `+${bonusGold} ORO`; 
-        document.getElementById('levelUpDesc').textContent = "Hai saccheggiato il nemico!";
-        
-        // SCAMBIA I TASTI: VIA BONUS, DENTRO NEXT
-        document.getElementById('btnBonusChest').style.display = 'none'; 
-        document.getElementById('btnNextLevel').style.display = 'inline-block'; // <-- Ora puoi cliccare su Avanza
-        
-        updateUI();
+        let bonusGold = Math.floor(Math.random() * 30) + 20; gold += bonusGold;
+        document.getElementById('levelUpTitle').textContent = `+${bonusGold} ORO`; document.getElementById('levelUpDesc').textContent = "Hai saccheggiato il nemico!";
+        document.getElementById('btnBonusChest').style.display = 'none'; document.getElementById('btnNextLevel').style.display = 'inline-block'; updateUI();
     }
-        function nextLevel() { 
-        level++; 
-        document.getElementById('levelUpModal').style.display = 'none'; 
-        
-        // Ripristina pulsante attacco
+    function nextLevel() { 
+        level++; document.getElementById('levelUpModal').style.display = 'none'; 
         document.getElementById('btnAttack').disabled = false; 
-        document.getElementById('btnAttack').style.display = 'block'; // Assicurati sia visibile
-        document.getElementById('chestActions').style.display = 'none'; // Nascondi azioni scrigno se erano aperte
-
+        document.getElementById('btnAttack').style.display = 'block';
+        document.getElementById('chestActions').style.display = 'none';
         startNewLevel(); 
     }
-	
+    
     function updateMarkers() {
         const pMarker = document.getElementById('markerPotion');
         if(items.potion > 0) { pMarker.style.display = 'flex'; pMarker.textContent = '+' + items.potion; } else { pMarker.style.display = 'none'; }
-        
         const sMarker = document.getElementById('markerShield');
-        if(items.shield > 0) { 
-            sMarker.style.display = 'flex'; 
-            sMarker.textContent = items.shield >= 999 ? '🛡️' : `-${items.shield}`;
-        } else { sMarker.style.display = 'none'; }
+        if(items.shield > 0) { sMarker.style.display = 'flex'; sMarker.textContent = items.shield >= 999 ? '🛡️' : `-${items.shield}`; } else { sMarker.style.display = 'none'; }
     }
 
     function updateStatusIcons() {
-        // Bonus
         document.getElementById('statusMirror').style.display = mirrorEffect ? 'flex' : 'none';
         document.getElementById('statusVine').style.display = vineTrap ? 'flex' : 'none';
         document.getElementById('statusPower').style.display = nextTurnMultiplier > 1 ? 'flex' : 'none';
-        
-        // Malus
         document.getElementById('statusEnemyMirror').style.display = enemyMirrorEffect ? 'flex' : 'none';
         document.getElementById('statusHeroVine').style.display = heroVineTrap ? 'flex' : 'none';
         document.getElementById('statusEnemyPower').style.display = enemyNextTurnMultiplier > 1 ? 'flex' : 'none';
-
         const anyActive = mirrorEffect || vineTrap || nextTurnMultiplier > 1 || enemyMirrorEffect || heroVineTrap || enemyNextTurnMultiplier > 1;
         document.getElementById('statusContainer').style.display = anyActive ? 'flex' : 'none';
     }
@@ -1459,125 +1299,35 @@ function playFightSfx() {
     function updateShopUI() {
         const pEl = document.getElementById('shopPotion'); const pPrice = pEl.querySelector('.item-price');
         if (items.potion > 0) { pEl.classList.add('active'); pPrice.textContent = `ATTIVO (+${items.potion})`; } else { pEl.classList.remove('active'); pPrice.textContent = "Scegli"; }
-        
         const sEl = document.getElementById('shopShield'); const sPrice = sEl.querySelector('.item-price');
-        if(items.shield > 0) { 
-            sEl.classList.add('active'); 
-            sPrice.textContent = items.shield >= 999 ? "MAX" : `ATTIVO (-${items.shield})`; 
-        } else { 
-            sEl.classList.remove('active'); sPrice.textContent = "Scegli"; 
-        }
+        if(items.shield > 0) { sEl.classList.add('active'); sPrice.textContent = items.shield >= 999 ? "MAX" : `ATTIVO (-${items.shield})`; } else { sEl.classList.remove('active'); sPrice.textContent = "Scegli"; }
     }
-        function updateUI() {
-        // Barre Vita e Testi
-        document.getElementById('hpBarPlayer').style.width = `${(hpPlayer/maxHpPlayer)*100}%`; 
-        document.getElementById('hpPlayer').textContent = Math.max(0, hpPlayer); 
-        document.getElementById('hpMaxPlayer').textContent = maxHpPlayer;
+    
+    function updateUI() {
+        document.getElementById('hpBarPlayer').style.width = `${(hpPlayer/maxHpPlayer)*100}%`; document.getElementById('hpPlayer').textContent = Math.max(0, hpPlayer); document.getElementById('hpMaxPlayer').textContent = maxHpPlayer;
+        let percentage = (hpEnemy / maxHpEnemy) * 100; document.getElementById('hpBarEnemy').style.width = `${percentage}%`; document.getElementById('hpEnemy').textContent = Math.max(0, hpEnemy); document.getElementById('hpMaxEnemy').textContent = maxHpEnemy; 
+        document.getElementById('gold').textContent = gold; document.getElementById('roundCounter').textContent = totalRounds;
+        for(let i=1; i<=5; i++) { let dot = document.getElementById(`dot${i}`); i <= chestCount ? dot.classList.add('active') : dot.classList.remove('active'); }
         
-        let percentage = (hpEnemy / maxHpEnemy) * 100; 
-        document.getElementById('hpBarEnemy').style.width = `${percentage}%`; 
-        document.getElementById('hpEnemy').textContent = Math.max(0, hpEnemy); 
-        document.getElementById('hpMaxEnemy').textContent = maxHpEnemy; 
+        const flames = document.querySelectorAll('.combo-flame'); const txtHero = document.getElementById('comboTextHero');
+        flames.forEach((f,i) => { if(i < streak) f.classList.add('active'); else f.classList.remove('active'); });
+        if (streak >= 3) { txtHero.style.display = 'block'; txtHero.textContent = streak >= 5 ? "MAX!" : (streak >= 4 ? "x2" : "x1.5"); } else { txtHero.style.display = 'none'; }
         
-        document.getElementById('gold').textContent = gold; 
-        document.getElementById('roundCounter').textContent = totalRounds;
-
-        // Chest Dots
-        for(let i=1; i<=5; i++) { 
-            let dot = document.getElementById(`dot${i}`); 
-            i <= chestCount ? dot.classList.add('active') : dot.classList.remove('active'); 
-        }
-
-        // --- GESTIONE COMBO EROE (Fiamme) ---
-        const flames = document.querySelectorAll('.combo-flame'); 
-        const txtHero = document.getElementById('comboTextHero');
-        flames.forEach((f,i) => { 
-            if(i < streak) f.classList.add('active'); else f.classList.remove('active'); 
-        });
-        if (streak >= 3) { 
-            txtHero.style.display = 'block'; 
-            txtHero.textContent = streak >= 5 ? "MAX!" : (streak >= 4 ? "x2" : "x1.5"); 
-        } else { 
-            txtHero.style.display = 'none'; 
-        }
-
-        // --- GESTIONE COMBO NEMICO (Teschi) ---
-        const skulls = document.querySelectorAll('.combo-skull'); 
-        const txtEnemy = document.getElementById('comboTextEnemy');
-        
-        // Controllo di sicurezza nel caso non avessi ancora incollato l'HTML dei teschi
+        const skulls = document.querySelectorAll('.combo-skull'); const txtEnemy = document.getElementById('comboTextEnemy');
         if(skulls.length > 0) {
-            skulls.forEach((s,i) => { 
-                if(i < enemyStreak) s.classList.add('active'); else s.classList.remove('active'); 
-            });
-            if (enemyStreak >= 3) { 
-                txtEnemy.style.display = 'block'; 
-                txtEnemy.textContent = enemyStreak >= 5 ? "MAX!" : (enemyStreak >= 4 ? "x2" : "x1.5"); 
-            } else { 
-                txtEnemy.style.display = 'none'; 
-            }
+            skulls.forEach((s,i) => { if(i < enemyStreak) s.classList.add('active'); else s.classList.remove('active'); });
+            if (enemyStreak >= 3) { txtEnemy.style.display = 'block'; txtEnemy.textContent = enemyStreak >= 5 ? "MAX!" : (enemyStreak >= 4 ? "x2" : "x1.5"); } else { txtEnemy.style.display = 'none'; }
         }
         
-        // Dadi
-        let hStats = getHeroStats(heroLevel); 
-        document.getElementById('diceLabelPlayer').textContent = `1d${hStats.die}`;
+        let hStats = getHeroStats(heroLevel); document.getElementById('diceLabelPlayer').textContent = `1d${hStats.die}`;
     }
-
-	
-	 // --- FUNZIONE EFFETTO SANGUE ---
-    const bloodImages = [
-        "https://ste388.github.io/DiceRPG/img/sangue.png",
-        "https://ste388.github.io/DiceRPG/img/sangue1.png",
-        "https://ste388.github.io/DiceRPG/img/sangue2.png",
-        "https://ste388.github.io/DiceRPG/img/sangue3.png",
-        "https://ste388.github.io/DiceRPG/img/sangue4.png"
-    ];
-
-    function triggerBloodEffect() {
-        const overlay = document.getElementById('bloodOverlay');
-        const img = document.getElementById('bloodImage');
-        
-        // 1. Pesca immagine a caso
-        const rnd = Math.floor(Math.random() * bloodImages.length);
-        img.src = bloodImages[rnd];
-        
-        // 2. Mostra
-        overlay.style.display = 'flex';
-        
-        // 3. Nascondi dopo 1 secondo (1000 ms)
-        // Nota: Rimuoviamo e riaggiungiamo la classe per riavviare l'animazione CSS ogni volta
-        img.classList.remove('blood-img');
-        void img.offsetWidth; // Trigger reflow
-        img.classList.add('blood-img');
-
-        setTimeout(() => {
-            overlay.style.display = 'none';
-        }, 1000);
-    }
-	
-	function triggerShieldEffect() {
-        const overlay = document.getElementById('shieldOverlay');
-        const img = document.getElementById('shieldImageDisplay');
-
-        // Mostra
-        overlay.style.display = 'flex';
-        
-        // Reset Animazione
-        img.classList.remove('blood-img');
-        void img.offsetWidth; // Force reflow
-        img.classList.add('blood-img');
-
-        // Nascondi dopo 1 secondo
-        setTimeout(() => {
-            overlay.style.display = 'none';
-        }, 1000);
-    }
-	
     function addLog(t, v, c) {
         const l = document.getElementById('logList'); const e = document.createElement('div'); e.className = `log-entry ${c}`;
         e.innerHTML = `<div><span class="round-badge">#${totalRounds}</span><span>${t}</span></div><strong>${v}</strong>`; l.insertBefore(e, l.firstChild);
     }
+    
     initGame();
 </script>
+
 </body>
 </html>
