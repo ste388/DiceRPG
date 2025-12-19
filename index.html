@@ -3,10 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Kingdom's Dice RPG - Global Turns</title>
+    <title>Kingdom's Dice RPG - Malus Chest</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=MedievalSharp&display=swap" rel="stylesheet">
     
     <style>
+	
+	/* Stile Epico per il Tasto Reset */
+.btn-epic-reset {
+    width: 100%;
+    padding: 20px;
+    background: linear-gradient(to bottom, #ffd700, #ff8f00); /* Oro vibrante */
+    color: #3e0000; /* Rosso sangue scuro */
+    font-family: 'MedievalSharp', cursive;
+    font-size: 1.8em;
+    font-weight: bold;
+    border: 3px solid #fff;
+    border-radius: 50px;
+    cursor: pointer;
+    box-shadow: 0 0 20px #ff6f00; /* Alone luminoso */
+    text-transform: uppercase;
+    animation: pulseEpic 2s infinite; /* Pulsazione */
+    transition: transform 0.2s;
+    margin-top: 10px;
+}
+
+.btn-epic-reset:hover {
+    transform: scale(1.05);
+    background: linear-gradient(to bottom, #ffe082, #ffca28);
+    box-shadow: 0 0 40px #ff6f00;
+}
+
+@keyframes pulseEpic {
+    0% { box-shadow: 0 0 15px #ff6f00; }
+    50% { box-shadow: 0 0 30px #ffd700; }
+    100% { box-shadow: 0 0 15px #ff6f00; }
+}
+
+	
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         :root {
@@ -76,6 +109,54 @@
             border: 4px solid #d32f2f !important; 
         }
 
+        /* ANIMAZIONE POZIONE E SCUDO */
+        .marker {
+            position: absolute; width: 30px; height: 30px; border-radius: 50%; 
+            display: none; align-items: center; justify-content: center;
+            font-size: 0.9em; font-weight: bold; color: white;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3); z-index: 10;
+            border: 2px solid white;
+            transition: all 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+        }
+        .marker.potion { top: -8px; right: -8px; background: #8e24aa; }
+        .marker.shield { top: -8px; left: -8px; background: #1976d2; }
+
+        .marker.fly-to-center {
+            top: 50% !important; right: 50% !important; bottom: auto !important; left: auto !important;
+            transform: translate(50%, -150%) scale(2); 
+            opacity: 0; 
+        }
+        
+        .marker.shield-block-anim {
+            top: 50% !important; left: 110% !important; 
+            transform: translate(50px, -50px) scale(2.5);
+            opacity: 0;
+        }
+
+        .dado-boosted {
+            animation: textPop 0.4s ease-out;
+            color: #8e24aa !important;
+            text-shadow: 0 0 10px rgba(142, 36, 170, 0.5);
+        }
+        
+        .parry-text {
+            position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%);
+            font-family: 'MedievalSharp'; font-size: 2em; color: #1976d2;
+            text-shadow: 0 0 10px white; z-index: 20;
+            animation: floatUp 1s forwards; pointer-events: none;
+        }
+        @keyframes floatUp {
+            0% { opacity: 0; transform: translate(-50%, 0); }
+            20% { opacity: 1; transform: translate(-50%, -20px); }
+            100% { opacity: 0; transform: translate(-50%, -60px); }
+        }
+
+        @keyframes textPop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.4); }
+            100% { transform: scale(1); }
+        }
+
         /* --- MEDIA QUERY SMARTPHONE --- */
         @media (max-width: 768px) {
             body { padding: 10px; align-items: flex-start; }
@@ -115,6 +196,7 @@
         .log-entry.dmg-take { color: #c62828; background: #ffebee; }
         .log-entry.critical { color: #b71c1c; background: #ffcdd2; border: 1px solid #d32f2f; }
         .log-entry.chest { color: #6a1b9a; background: #f3e5f5; }
+        .log-entry.malus { color: #4a148c; background: #f3e5f5; border: 1px solid #7b1fa2; } /* Nuovo stile Malus */
         .log-entry.win { color: #f57f17; background: #fffde7; border: 1px solid #fbc02d; }
         .log-entry.draw { color: #555; background: #eee; }
         
@@ -206,7 +288,7 @@
         .item-desc { font-size: 0.7em; color: #8d6e63; display: block; margin-top: 2px; }
 
         /* DADI */
-        .dadi-area { display: flex; justify-content: center; gap: 40px; margin: 30px 0; min-height: 100px; }
+        .dadi-area { display: flex; justify-content: center; gap: 40px; margin: 30px 0; min-height: 100px; position: relative; }
         .dado-wrapper { text-align: center; position: relative; }
         .dado {
             width: 100px; height: 100px; 
@@ -223,19 +305,9 @@
             font-size: 0.8em; color: #8d6e63; font-weight: bold;
         }
 
-        .marker {
-            position: absolute; width: 30px; height: 30px; border-radius: 50%; 
-            display: none; align-items: center; justify-content: center;
-            font-size: 0.9em; font-weight: bold; color: white;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3); z-index: 10;
-            border: 2px solid white;
-        }
-        .marker.potion { top: -8px; right: -8px; background: #8e24aa; }
-        .marker.shield { top: -8px; left: -8px; background: #1976d2; }
-        
         .status-icon {
             position: absolute; bottom: -45px; width: 100%; text-align: center;
-            display: none; justify-content: center; gap: 8px;
+            display: none; justify-content: center; gap: 8px; flex-wrap: wrap;
         }
         .mini-icon { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.9em; color: white; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
 
@@ -277,7 +349,31 @@
             border: 8px solid #ffca28;
             animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
+        .modal-content.malus-mode { /* Stile specifico per Malus */
+            background: #d1c4e9; border-color: #7b1fa2;
+        }
         
+        /* STILE LISTA ITEMS */
+        .potion-list {
+            display: flex; flex-direction: column; gap: 10px; width: 100%;
+        }
+        .potion-btn {
+            background: white; border: 2px solid #8e24aa;
+            border-radius: 15px; padding: 12px;
+            display: flex; justify-content: space-between; align-items: center;
+            cursor: pointer; font-family: 'Cinzel'; font-weight: bold;
+            transition: 0.2s; color: #4a148c;
+        }
+        .potion-btn:hover { background: #f3e5f5; transform: scale(1.02); }
+        
+        /* STILI SPECIFICI SCUDO */
+        .potion-btn.shield-btn { border-color: #1976d2; color: #0d47a1; }
+        .potion-btn.shield-btn:hover { background: #e3f2fd; }
+        .potion-btn.shield-btn span:last-child { background: #3e2723; }
+
+        .potion-btn span:first-child { font-size: 1.2em; }
+        .potion-btn span:last-child { color: #f9a825; background: #4e342e; padding: 3px 10px; border-radius: 10px; font-size: 0.9em; }
+
         /* MODALE LIVELLO EROE */
         .level-up-card {
             background: linear-gradient(135deg, #fff59d 0%, #fbc02d 100%);
@@ -336,6 +432,7 @@
         }
 
         .btn-bonus { background: linear-gradient(to bottom, #fdd835, #fbc02d); color: #5d4037; }
+        .btn-close { background: #5d4037; margin-top: 10px; font-size: 1em; padding: 10px; }
         
         /* OVERLAY GAME OVER */
         .overlay-gameover {
@@ -394,7 +491,7 @@
             <div class="fighter-stat">
                 <div class="fighter-name" id="enemyName">Nemico</div>
                 <div class="hp-bar-container"><div class="hp-fill enemy" id="hpBarEnemy" style="width: 100%;"></div></div>
-                <div style="font-size:0.8em; margin-top:5px; font-weight:bold; color:#6d4c41;"><span id="hpEnemy">20</span>/<span id="hpMaxEnemy">20</span> PV</div>
+                <div style="font-size:0.8em; margin-top:5px; font-weight:bold; color:#6d4c41;"><span id="hpEnemy">25</span>/<span id="hpMaxEnemy">25</span> PV</div>
             </div>
         </div>
 
@@ -425,14 +522,14 @@
         </div>
 
         <div class="shop-section">
-            <div class="shop-item" id="shopPotion" onclick="buyItem('potion')">
+            <div class="shop-item" id="shopPotion" onclick="openPotionShop()">
                 <span class="item-emoji">🧪</span>
-                <span class="item-price">30 💰</span>
-                <span class="item-desc">+2 Tocco</span>
+                <span class="item-price">Scegli</span>
+                <span class="item-desc">Tocco Magico</span>
             </div>
-            <div class="shop-item" id="shopShield" onclick="buyItem('shield')">
+            <div class="shop-item" id="shopShield" onclick="openShieldShop()">
                 <span class="item-emoji">🛡️</span>
-                <span class="item-price">25 💰</span>
+                <span class="item-price">Scegli</span>
                 <span class="item-desc">Egida</span>
             </div>
         </div>
@@ -444,9 +541,15 @@
                 <div id="markerPotion" class="marker potion">+2</div>
                 <div id="markerShield" class="marker shield">🛡️</div>
                 <div class="status-icon" id="statusContainer">
+                    <!-- Bonus -->
                     <div id="statusMirror" class="mini-icon" style="background:#42a5f5;">🪞</div>
                     <div id="statusVine" class="mini-icon" style="background:#66bb6a;">🌿</div>
                     <div id="statusPower" class="mini-icon" style="background:#ef5350;">⚔️</div>
+                    
+                    <!-- Malus -->
+                    <div id="statusEnemyMirror" class="mini-icon" style="background:#4a148c; border-color:#7b1fa2;">🖤</div>
+                    <div id="statusHeroVine" class="mini-icon" style="background:#263238; border-color:#546e7a;">🥀</div>
+                    <div id="statusEnemyPower" class="mini-icon" style="background:#b71c1c; border-color:#e53935;">👹</div>
                 </div>
             </div>
             <div class="dado-wrapper">
@@ -456,38 +559,73 @@
         </div>
 
         <div class="actions-area">
-            <button class="btn-style btn-attack" id="btnAttack" onclick="combatTurn()">⚔️ Attacco</button>
+            <button class="btn-style btn-attack" id="btnAttack" onclick="resolveCombatStart()">⚔️ Attacco</button>
             <div class="chest-actions" id="chestActions">
                 <button class="btn-style btn-open" onclick="openChest()">🎁 Apri</button>
                 <button class="btn-style btn-ignore" onclick="ignoreChest()">Ignora</button>
             </div>
         </div>
 
-        <div class="overlay-gameover" id="overlay">
-            <div style="font-family:'MedievalSharp'; font-size:3em; color:#ef5350; margin-bottom:10px;">SCONFITTA</div>
-            <p style="margin-bottom:20px; font-size:1.1em; color:#d7ccc8;">Il tuo viaggio termina qui...</p>
-            
-            <div class="report-box">
-                <div class="report-line"><span>Livello Eroe:</span> <span class="report-val" id="endLevel">1</span></div>
-                <div class="report-line"><span>Monete:</span> <span class="report-val" id="endGold">0</span></div>
-                <div class="report-line"><span>Round:</span> <span class="report-val" id="endRounds">0</span></div>
-            </div>
+      <!-- NUOVO CODICE CON TASTO EPICO -->
+		<div class="overlay-gameover" id="overlay">
+			<div style="font-family:'MedievalSharp'; font-size:3.5em; color:#ef5350; margin-bottom:5px; text-shadow: 0 0 20px rgba(255,0,0,0.6);">SCONFITTA</div>
+			<p style="margin-bottom:25px; font-size:1.2em; color:#d7ccc8; font-style:italic;">"Anche le leggende cadono... ma solo i veri eroi si rialzano."</p>
+			
+			<div class="report-box">
+				<div class="report-line"><span>Livello Eroe:</span> <span class="report-val" id="endLevel">1</span></div>
+				<div class="report-line"><span>Monete:</span> <span class="report-val" id="endGold">0</span></div>
+				<div class="report-line"><span>Round:</span> <span class="report-val" id="endRounds">0</span></div>
+			</div>
 
-            <button class="btn-style" onclick="initGame()" style="width:100%; padding:15px; background:#5d4037;">Nuova Avventura</button>
-        </div>
+			<!-- Ecco il pulsante modificato -->
+			<button class="btn-epic-reset" onclick="initGame()">
+				💀 Risorgi e Combatti
+			</button>
+		</div>
+
 
     </div>
-</div>
+
 
 <!-- MODALI -->
 <div class="modal-overlay" id="chestModal">
-    <div class="modal-content">
+    <div class="modal-content" id="chestModalContent">
         <div class="reward-icon-container">
             <span id="rewardEmoji">❓</span>
         </div>
         <div class="reward-title" id="rewardTitle">Titolo</div>
         <div class="reward-desc" id="rewardDesc">Descrizione</div>
-        <button class="btn-modal" onclick="closeChestModal()">Raccogli</button>
+        <button class="btn-modal" onclick="closeChestModal()">Accetta il Destino</button>
+    </div>
+</div>
+
+<!-- MODALE NEGOZIO POZIONI -->
+<div class="modal-overlay" id="potionModal">
+    <div class="modal-content">
+        <div style="font-family:'MedievalSharp'; font-size:1.8em; color:#8e24aa; margin-bottom:15px;">🧪 Tocco Magico</div>
+        <div class="potion-list">
+            <div class="potion-btn" onclick="buyPotion(1, 20)"><span>+1 Potenza</span><span>20 💰</span></div>
+            <div class="potion-btn" onclick="buyPotion(2, 30)"><span>+2 Potenza</span><span>30 💰</span></div>
+            <div class="potion-btn" onclick="buyPotion(3, 50)"><span>+3 Potenza</span><span>50 💰</span></div>
+            <div class="potion-btn" onclick="buyPotion(4, 80)"><span>+4 Potenza</span><span>80 💰</span></div>
+            <div class="potion-btn" onclick="buyPotion(5, 100)"><span>+5 Potenza</span><span>100 💰</span></div>
+        </div>
+        <button class="btn-modal btn-close" onclick="closePotionModal()">Annulla</button>
+    </div>
+</div>
+
+<!-- MODALE NEGOZIO SCUDI -->
+<div class="modal-overlay" id="shieldModal">
+    <div class="modal-content">
+        <div style="font-family:'MedievalSharp'; font-size:1.8em; color:#1976d2; margin-bottom:15px;">🛡️ Egida</div>
+        <div class="potion-list">
+            <div class="potion-btn shield-btn" onclick="buyShield(1, 10)"><span>-1 Danno</span><span>10 💰</span></div>
+            <div class="potion-btn shield-btn" onclick="buyShield(2, 20)"><span>-2 Danni</span><span>20 💰</span></div>
+            <div class="potion-btn shield-btn" onclick="buyShield(3, 30)"><span>-3 Danni</span><span>30 💰</span></div>
+            <div class="potion-btn shield-btn" onclick="buyShield(4, 40)"><span>-4 Danni</span><span>40 💰</span></div>
+            <div class="potion-btn shield-btn" onclick="buyShield(999, 80)"><span>Parata Totale</span><span>80 💰</span></div>
+        </div>
+        <button class="btn-modal btn-close" onclick="closeShieldModal()">Annulla</button>
     </div>
 </div>
 
@@ -509,7 +647,6 @@
     </div>
 </div>
 
-<!-- NUOVO MODALE PASSAGGIO LIVELLO EROE -->
 <div class="modal-overlay" id="heroLevelModal">
     <div class="level-up-card">
         <div style="font-family:'MedievalSharp'; font-size:2em; color:#8a1c1c; margin-bottom:10px;">GLORIA ETERNA!</div>
@@ -535,23 +672,29 @@
     // --- SETUP GLOBALE ---
     let hpPlayer, maxHpPlayer, hpEnemy, maxHpEnemy, gold, level, streak, chestCount, round, totalRounds;
     let heroLevel = 1;
-    let items = { potion: false, shield: false };
+    let items = { potion: 0, shield: 0 };
+    
+    // Status Bonus
     let nextTurnMultiplier = 1; 
     let mirrorEffect = false;
     let vineTrap = false;
 
-    // --- CONFIGURAZIONE NEMICI ---
+    // Status Malus
+    let enemyNextTurnMultiplier = 1;
+    let enemyMirrorEffect = false;
+    let heroVineTrap = false;
+
+    // --- CONFIGURAZIONE ---
     function getEnemyStats(lvl) {
-        if (lvl === 1) return { hp: 20, die: 6 };
+        if (lvl === 1) return { hp: 25, die: 6 };
         if (lvl === 2) return { hp: 30, die: 6 };
-        if (lvl === 3) return { hp: 40, die: 8 }; // Boss
+        if (lvl === 3) return { hp: 40, die: 8 };
         if (lvl === 4) return { hp: 45, die: 8 };
         if (lvl === 5) return { hp: 45, die: 10 };
-        if (lvl === 6) return { hp: 50, die: 10 }; // Boss
+        if (lvl === 6) return { hp: 50, die: 10 };
         return { hp: 50 + ((lvl - 6) * 10), die: 12 };
     }
 
-    // --- CONFIGURAZIONE EROE ---
     function getHeroStats(lvl) {
         if (lvl === 1) return { maxHp: 25, die: 6 };
         if (lvl === 2) return { maxHp: 30, die: 6 };
@@ -563,35 +706,51 @@
     }
 
     function initGame() {
-        gold = 50; level = 1; streak = 0; chestCount = 0;
+        // 1. Reset Variabili Base
+        gold = 50; 
+        level = 1; 
+        streak = 0; 
+        chestCount = 0;
         totalRounds = 1; 
         heroLevel = 1;
 
+        // 2. FIX VISIVO: Aggiorniamo subito il testo del livello
+        document.getElementById('heroNameDisplay').innerHTML = `Eroe <span style="font-size:0.7em; color:#8d6e63; margin-left:5px;">Lv.${heroLevel}</span>`;
+
+        // 3. CALCOLO STATISTICHE (Queste erano le righe probabilmente mancanti!)
         let stats = getHeroStats(1);
         maxHpPlayer = stats.maxHp;
         hpPlayer = maxHpPlayer;
 
-        items = { potion: false, shield: false };
+        // 4. Reset Oggetti ed Effetti
+        items = { potion: 0, shield: 0 };
         resetEffects(); 
 
+        // 5. Pulizia Interfaccia
         document.getElementById('logList').innerHTML = '';
         document.getElementById('overlay').style.display = 'none';
         document.getElementById('heroLevelModal').style.display = 'none';
         document.getElementById('chestModal').style.display = 'none';
         document.getElementById('levelUpModal').style.display = 'none'; 
+        document.getElementById('potionModal').style.display = 'none';
+        document.getElementById('shieldModal').style.display = 'none';
         
         document.getElementById('btnAttack').style.display = 'block';
         document.getElementById('btnAttack').disabled = false;
         document.getElementById('chestActions').style.display = 'none';
 
+        // 6. Avvio Partita
         updateShopUI(); 
         updateMarkers();
         startNewLevel(true); 
         updateUI();
     }
 
+
     function resetEffects() {
-        nextTurnMultiplier = 1; mirrorEffect = false; vineTrap = false; updateStatusIcons();
+        nextTurnMultiplier = 1; mirrorEffect = false; vineTrap = false; 
+        enemyNextTurnMultiplier = 1; enemyMirrorEffect = false; heroVineTrap = false;
+        updateStatusIcons();
     }
 
     function startNewLevel(isFirst) {
@@ -619,56 +778,21 @@
         updateUI();
     }
 
-    // --- LOGICA LIVELLO EROE ---
-    function checkHeroLevel() {
-        let calculatedLevel = Math.floor((totalRounds - 1) / 20) + 1;
-        if (calculatedLevel > heroLevel) {
-            let currentHp = hpPlayer;
-            heroLevel = calculatedLevel;
-            let newStats = getHeroStats(heroLevel);
-            maxHpPlayer = newStats.maxHp;
-
-            let foundGold = Math.floor(Math.random() * 50) + 50; 
-            gold += foundGold;
-
-            let healAmount = Math.floor(currentHp * 0.7); 
-            hpPlayer = Math.min(maxHpPlayer, currentHp + healAmount);
-
-            showHeroLevelModal(heroLevel, foundGold, healAmount);
-        }
-        document.getElementById('heroNameDisplay').innerHTML = `Eroe <span style="font-size:0.7em; color:#8d6e63; margin-left:5px;">Lv.${heroLevel}</span>`;
-        let hStats = getHeroStats(heroLevel);
-        document.getElementById('diceLabelPlayer').textContent = `1d${hStats.die}`;
-    }
-
-    function showHeroLevelModal(lvl, g, h) {
-        document.getElementById('heroLvlNum').innerText = lvl;
-        document.getElementById('lvlGold').innerText = g;
-        document.getElementById('lvlHeal').innerText = h;
-        document.getElementById('heroLevelModal').style.display = 'flex';
-    }
-
-    function closeHeroLevelModal() {
-        document.getElementById('heroLevelModal').style.display = 'none';
-        updateUI();
-    }
-
-    // --- UTILS PER ANIMAZIONI ---
-    function triggerShake() {
-        const gp = document.getElementById('gamePanel');
-        gp.classList.add('shake-effect');
-        setTimeout(() => { gp.classList.remove('shake-effect'); }, 500);
-    }
-
-    // --- COMBAT ---
-    function combatTurn() {
+    // --- COMBAT FLOW ---
+    
+    function resolveCombatStart() {
         document.getElementById('btnAttack').disabled = true;
         document.getElementById('dadoPlayer').textContent = '...'; 
         document.getElementById('dadoEnemy').textContent = '...';
-        setTimeout(resolveCombat, 600);
+        document.getElementById('dadoPlayer').classList.remove('dado-boosted');
+        
+        const oldTxt = document.querySelector('.parry-text');
+        if(oldTxt) oldTxt.remove();
+        
+        setTimeout(resolveCombatAnimation, 600);
     }
 
-    function resolveCombat() {
+    function resolveCombatAnimation() {
         let hStats = getHeroStats(heroLevel);
         let eStats = getEnemyStats(level);
         
@@ -678,68 +802,147 @@
         let rollP = rawRollP;
         let rollE = rawRollE;
 
-        if (vineTrap) { rollP = 0; rawRollP = 0; vineTrap = false; updateStatusIcons(); }
-        if (items.potion && rollP > 0) { rollP += 2; items.potion = false; }
+        // Gestione Trappole (Bonus e Malus)
+        if (vineTrap) {
+            rollP = 0; rawRollP = 0; vineTrap = false; 
+            updateStatusIcons();
+        }
+        if (heroVineTrap) {
+            rollP = 0; rawRollP = 0; heroVineTrap = false;
+            addLog("Edera Nera", "Il tuo dado è bloccato!", "malus");
+            updateStatusIcons();
+        }
 
         document.getElementById('dadoPlayer').textContent = rollP;
         document.getElementById('dadoEnemy').textContent = rollE;
-        updateShopUI(); updateMarkers();
 
+        // --- ANIMAZIONE POZIONE (Modifica il tiro) ---
+        if (items.potion > 0 && rollP > 0) {
+            const marker = document.getElementById('markerPotion');
+            const diceEl = document.getElementById('dadoPlayer');
+            
+            marker.classList.add('fly-to-center');
+            
+            setTimeout(() => {
+                let bonus = items.potion;
+                items.potion = 0; 
+                rollP += bonus;
+                
+                diceEl.textContent = rollP;
+                diceEl.classList.add('dado-boosted');
+                
+                marker.style.display = 'none';
+                marker.classList.remove('fly-to-center'); 
+                updateShopUI();
+
+                setTimeout(() => {
+                    finalizeCombat(rollP, rollE, rawRollP, rawRollE);
+                }, 500);
+
+            }, 600);
+            return;
+        }
+
+        finalizeCombat(rollP, rollE, rawRollP, rawRollE);
+    }
+
+    function finalizeCombat(rollP, rollE, rawRollP, rawRollE) {
+        // Se il giocatore PERDE e ha lo SCUDO attivo
+        if (rollP < rollE && items.shield > 0) {
+            return triggerShieldAnimation(rollP, rollE, rawRollP, rawRollE);
+        }
+
+        applyDamageAndLog(rollP, rollE, rawRollP, rawRollE);
+    }
+
+    function triggerShieldAnimation(rollP, rollE, rawRollP, rawRollE) {
+        const marker = document.getElementById('markerShield');
+        const gamePanel = document.getElementById('gamePanel');
+        
+        marker.classList.add('shield-block-anim');
+
+        setTimeout(() => {
+            let sVal = items.shield;
+            let txt = sVal >= 999 ? "BLOCKED!" : `-${sVal}`;
+            
+            let floatTxt = document.createElement('div');
+            floatTxt.className = 'parry-text';
+            floatTxt.innerText = txt;
+            gamePanel.appendChild(floatTxt);
+            
+            marker.style.display = 'none';
+            marker.classList.remove('shield-block-anim');
+            
+            applyDamageAndLog(rollP, rollE, rawRollP, rawRollE, true); 
+            
+        }, 600);
+    }
+
+    function applyDamageAndLog(rollP, rollE, rawRollP, rawRollE, shieldUsed = false) {
+        let hStats = getHeroStats(heroLevel);
+        let eStats = getEnemyStats(level);
         let difference = Math.abs(rollP - rollE);
         
         let isOpenRollPlayer = (rawRollP === hStats.die && rawRollE === 1);
         let isOpenRollEnemy = (rawRollE === eStats.die && rawRollP === 1);
 
         if (rollP > rollE) {
+            // VITTORIA EROE (o Malus Specchio Nero)
             streak++; 
             chestCount = Math.min(5, chestCount + 1);
             let mult = 1;
             
-            if (isOpenRollPlayer) {
-                mult = 2; 
-                triggerShake(); 
-            }
-            
+            if (isOpenRollPlayer) { mult = 2; triggerShake(); }
             let comboMult = 1;
             if (streak >= 5) comboMult = 4; else if (streak >= 3) comboMult = 1.5;
-            mult = mult * comboMult;
-
+            mult *= comboMult;
             if (nextTurnMultiplier > 1) { mult *= nextTurnMultiplier; nextTurnMultiplier = 1; updateStatusIcons(); }
 
             let dmg = Math.floor(difference * mult);
-            hpEnemy -= dmg; gold += dmg;
             
-            let extraTxt = "";
-            if(isOpenRollPlayer) extraTxt = " (TIRO APERTO!)";
-            else if(comboMult > 1) extraTxt = ` (Crit x${comboMult})`;
-
-            addLog("Inflitto", `-${dmg} HP${extraTxt}`, isOpenRollPlayer ? "critical" : "dmg-deal");
+            // CHECK MALUS: Specchio Nero
+            if (enemyMirrorEffect) {
+                enemyMirrorEffect = false; updateStatusIcons();
+                hpPlayer -= dmg;
+                addLog("Specchio Nero", `Danno riflesso! (-${dmg} HP)`, "malus");
+            } else {
+                hpEnemy -= dmg; gold += dmg;
+                let extraTxt = isOpenRollPlayer ? " (TIRO APERTO!)" : (comboMult > 1 ? ` (Crit x${comboMult})` : "");
+                addLog("Inflitto", `-${dmg} HP${extraTxt}`, isOpenRollPlayer ? "critical" : "dmg-deal");
+            }
 
         } else if (rollP < rollE) {
+            // SCONFITTA EROE (o Bonus Specchio)
             streak = 0;
             if (mirrorEffect) {
                 let dmg = difference;
                 if(isOpenRollEnemy) { dmg *= 2; triggerShake(); }
-                
                 hpEnemy -= dmg; mirrorEffect = false; updateStatusIcons();
                 addLog("Specchio", `Rifletti ${dmg}`, "chest");
             } else {
                 let dmg = difference;
-                
-                if (isOpenRollEnemy) {
-                    dmg *= 2; 
-                    triggerShake();
+                if (isOpenRollEnemy) { dmg *= 2; triggerShake(); }
+
+                // CHECK MALUS: Forza Nemica
+                if (enemyNextTurnMultiplier > 1) {
+                    dmg *= enemyNextTurnMultiplier;
+                    enemyNextTurnMultiplier = 1; updateStatusIcons();
                 }
 
-                if (items.shield) { 
-                    dmg = 0; items.shield = false; 
+                if (shieldUsed) {
+                    let shieldVal = items.shield;
+                    if (shieldVal >= 999) dmg = 0;
+                    else dmg = Math.max(0, dmg - shieldVal);
+                    
+                    items.shield = 0; 
                     updateShopUI(); updateMarkers();
-                    addLog("Egida", "Parato!", "chest");
+                    addLog("Egida", `Danno ridotto a ${dmg}`, "chest");
                 }
                 
                 hpPlayer -= dmg;
                 let extraTxt = isOpenRollEnemy ? " (TIRO APERTO!)" : "";
                 if(dmg > 0) addLog("Colpito", `-${dmg} HP${extraTxt}`, isOpenRollEnemy ? "critical" : "dmg-take");
+                else if(shieldUsed && dmg === 0) addLog("Parata", "Nessun Danno", "draw");
             }
         } else {
             streak = 0; addLog("Schivata", " - ", "draw");
@@ -748,6 +951,7 @@
         round++; totalRounds++;
         checkHeroLevel();
         updateUI();
+        
         if (checkWin()) return;
 
         if (chestCount >= 5) {
@@ -758,170 +962,173 @@
         }
     }
 
-    // --- CHEST & MODALS ---
+    // --- LOGICA SCRIGNO & MALUS ---
     function openChest() {
         chestCount = 0;
         let rand = Math.random() * 100;
-        let t, d, e;
+        let t, d, e, isMalus = false;
 
+        // 50% ORO (0-50)
         if (rand < 50) { 
             let g = Math.floor(Math.random() * 30) + 30; gold += g;
             t = "Tesoro"; d = `+${g} Monete`; e = "💰";
-        } 
-        else if (rand < 75) { 
+        }
+        // 12.5% FURIA (50 - 62.5)
+        else if (rand < 62.5) {
             nextTurnMultiplier = 2; t = "Furia"; d = "Prox attacco x2"; e = "⚔️";
-        } 
-        else if (rand < 85) { 
+        }
+        // 12.5% FORZA NEMICA (MALUS) (62.5 - 75)
+        else if (rand < 75) {
+            enemyNextTurnMultiplier = 2; isMalus = true;
+            t = "Forza Nemica"; d = "Nemico attacco x2"; e = "👹";
+        }
+        // 10% POTERE (75 - 85)
+        else if (rand < 85) {
             nextTurnMultiplier = 3; t = "Potere"; d = "Prox attacco x3"; e = "⚡";
-        } 
-        else if (rand < 95) { 
+        }
+        // 5% SPECCHIO (85 - 90)
+        else if (rand < 90) {
             mirrorEffect = true; t = "Specchio"; d = "Rifletti danno"; e = "🪞";
-        } 
-        else { 
-            vineTrap = true; t = "Radici"; d = "Prox tiro 0"; e = "🌿";
+        }
+        // 5% SPECCHIO NERO (MALUS) (90 - 95)
+        else if (rand < 95) {
+            enemyMirrorEffect = true; isMalus = true;
+            t = "Specchio Nero"; d = "Nemico riflette danno"; e = "🖤";
+        }
+        // 2.5% RADICI (95 - 97.5)
+        else if (rand < 97.5) {
+            vineTrap = true; t = "Radici"; d = "Nemico dado 0"; e = "🌿";
+        }
+        // 2.5% EDERA NERA (MALUS) (97.5 - 100)
+        else {
+            heroVineTrap = true; isMalus = true;
+            t = "Edera Nera"; d = "Tuo dado 0"; e = "🥀";
         }
 
-        showChestReward(t, d, e);
+        showChestReward(t, d, e, isMalus);
         updateStatusIcons(); updateUI();
         document.getElementById('chestActions').style.display = 'none';
         document.getElementById('btnAttack').style.display = 'block';
     }
 
-    function showChestReward(t, d, e) {
+    function showChestReward(t, d, e, isMalus) {
+        const modal = document.getElementById('chestModalContent');
+        if(isMalus) modal.classList.add('malus-mode');
+        else modal.classList.remove('malus-mode');
+
         document.getElementById('rewardTitle').textContent = t;
         document.getElementById('rewardDesc').textContent = d;
         document.getElementById('rewardEmoji').textContent = e;
         document.getElementById('chestModal').style.display = 'flex';
     }
-    function closeChestModal() { 
-        document.getElementById('chestModal').style.display = 'none'; 
-        document.getElementById('btnAttack').disabled = false;
-    }
-    function ignoreChest() {
-        chestCount = 0; updateUI();
-        document.getElementById('chestActions').style.display = 'none';
-        document.getElementById('btnAttack').style.display = 'block';
-        document.getElementById('btnAttack').disabled = false;
+
+    // --- GESTIONE MODALI UTILS ---
+    function closeChestModal() { document.getElementById('chestModal').style.display = 'none'; document.getElementById('btnAttack').disabled = false; }
+    function ignoreChest() { chestCount = 0; updateUI(); document.getElementById('chestActions').style.display = 'none'; document.getElementById('btnAttack').style.display = 'block'; document.getElementById('btnAttack').disabled = false; }
+
+    function openPotionShop() { if(items.potion > 0) return; document.getElementById('potionModal').style.display = 'flex'; }
+    function closePotionModal() { document.getElementById('potionModal').style.display = 'none'; }
+    function buyPotion(val, cost) { if(gold >= cost) { gold -= cost; items.potion = val; closePotionModal(); updateShopUI(); updateMarkers(); updateUI(); } }
+
+    function openShieldShop() { if(items.shield > 0) return; document.getElementById('shieldModal').style.display = 'flex'; }
+    function closeShieldModal() { document.getElementById('shieldModal').style.display = 'none'; }
+    function buyShield(val, cost) { if(gold >= cost) { gold -= cost; items.shield = val; closeShieldModal(); updateShopUI(); updateMarkers(); updateUI(); } }
+
+    function checkHeroLevel() {
+        let calculatedLevel = Math.floor((totalRounds - 1) / 20) + 1;
+        if (calculatedLevel > heroLevel) {
+            let currentHp = hpPlayer; heroLevel = calculatedLevel;
+            let newStats = getHeroStats(heroLevel); maxHpPlayer = newStats.maxHp;
+            let foundGold = Math.floor(Math.random() * 50) + 50; gold += foundGold;
+            let healAmount = Math.floor(currentHp * 0.7); hpPlayer = Math.min(maxHpPlayer, currentHp + healAmount);
+            showHeroLevelModal(heroLevel, foundGold, healAmount);
+        }
+        document.getElementById('heroNameDisplay').innerHTML = `Eroe <span style="font-size:0.7em; color:#8d6e63; margin-left:5px;">Lv.${heroLevel}</span>`;
+        let hStats = getHeroStats(heroLevel); document.getElementById('diceLabelPlayer').textContent = `1d${hStats.die}`;
     }
 
-    // --- WIN / LEVEL UP ---
+    function showHeroLevelModal(lvl, g, h) {
+        document.getElementById('heroLvlNum').innerText = lvl; document.getElementById('lvlGold').innerText = g;
+        document.getElementById('lvlHeal').innerText = h; document.getElementById('heroLevelModal').style.display = 'flex';
+    }
+    function closeHeroLevelModal() { document.getElementById('heroLevelModal').style.display = 'none'; updateUI(); }
+
+    function triggerShake() {
+        const gp = document.getElementById('gamePanel'); gp.classList.add('shake-effect');
+        setTimeout(() => { gp.classList.remove('shake-effect'); }, 500);
+    }
+    
     function checkWin() {
-        if (hpEnemy <= 0) {
-            hpEnemy = 0; updateUI();
-            addLog("Vittoria", "Livello Completato", "win");
-            setTimeout(showLevelUpModal, 500);
-            return true;
-        }
+        if (hpEnemy <= 0) { hpEnemy = 0; updateUI(); addLog("Vittoria", "Livello Completato", "win"); setTimeout(showLevelUpModal, 500); return true; }
         if (hpPlayer <= 0) {
-            document.getElementById('endLevel').textContent = heroLevel;
-            document.getElementById('endGold').textContent = gold;
-            document.getElementById('endRounds').textContent = totalRounds - 1;
-            document.getElementById('overlay').style.display = 'flex';
-            return true;
-        }
-        return false;
+            document.getElementById('endLevel').textContent = heroLevel; document.getElementById('endGold').textContent = gold;
+            document.getElementById('endRounds').textContent = totalRounds - 1; document.getElementById('overlay').style.display = 'flex'; return true;
+        } return false;
     }
-
     function showLevelUpModal() {
-        document.getElementById('levelUpTitle').textContent = "GLORIA!";
-        document.getElementById('levelUpDesc').textContent = "Nemico sconfitto!";
-        document.getElementById('btnBonusChest').style.display = 'inline-block';
-        document.getElementById('btnNextLevel').style.display = 'none';
+        document.getElementById('levelUpTitle').textContent = "GLORIA!"; document.getElementById('levelUpDesc').textContent = "Nemico sconfitto!";
+        document.getElementById('btnBonusChest').style.display = 'inline-block'; document.getElementById('btnNextLevel').style.display = 'none';
         document.getElementById('levelUpModal').style.display = 'flex';
     }
-
     function openLevelBonus() {
-        let bonusGold = Math.floor(Math.random() * 30) + 20; 
-        gold += bonusGold;
-        document.getElementById('levelUpTitle').textContent = `+${bonusGold} ORO`;
-        document.getElementById('levelUpDesc').textContent = "Hai saccheggiato il nemico!";
-        document.getElementById('btnBonusChest').style.display = 'none';
-        document.getElementById('btnNextLevel').style.display = 'inline-block';
-        updateUI();
+        let bonusGold = Math.floor(Math.random() * 30) + 20; gold += bonusGold;
+        document.getElementById('levelUpTitle').textContent = `+${bonusGold} ORO`; document.getElementById('levelUpDesc').textContent = "Hai saccheggiato il nemico!";
+        document.getElementById('btnBonusChest').style.display = 'none'; document.getElementById('btnNextLevel').style.display = 'inline-block'; updateUI();
     }
-
-    function nextLevel() {
-        level++; document.getElementById('levelUpModal').style.display = 'none';
-        startNewLevel(); document.getElementById('btnAttack').disabled = false;
-    }
-
-    // --- UTILS ---
-    function buyItem(type) {
-        let cost = type === 'potion' ? 30 : 25;
-        if(gold >= cost && !items[type]) { 
-            gold -= cost; items[type] = true; updateShopUI(); updateMarkers(); updateUI(); 
-        }
-    }
-
+    function nextLevel() { level++; document.getElementById('levelUpModal').style.display = 'none'; startNewLevel(); document.getElementById('btnAttack').disabled = false; }
+    
     function updateMarkers() {
-        document.getElementById('markerPotion').style.display = items.potion ? 'flex' : 'none';
-        document.getElementById('markerShield').style.display = items.shield ? 'flex' : 'none';
+        const pMarker = document.getElementById('markerPotion');
+        if(items.potion > 0) { pMarker.style.display = 'flex'; pMarker.textContent = '+' + items.potion; } else { pMarker.style.display = 'none'; }
+        
+        const sMarker = document.getElementById('markerShield');
+        if(items.shield > 0) { 
+            sMarker.style.display = 'flex'; 
+            sMarker.textContent = items.shield >= 999 ? '🛡️' : `-${items.shield}`;
+        } else { sMarker.style.display = 'none'; }
     }
 
     function updateStatusIcons() {
+        // Bonus
         document.getElementById('statusMirror').style.display = mirrorEffect ? 'flex' : 'none';
         document.getElementById('statusVine').style.display = vineTrap ? 'flex' : 'none';
         document.getElementById('statusPower').style.display = nextTurnMultiplier > 1 ? 'flex' : 'none';
-        const anyActive = mirrorEffect || vineTrap || nextTurnMultiplier > 1;
+        
+        // Malus
+        document.getElementById('statusEnemyMirror').style.display = enemyMirrorEffect ? 'flex' : 'none';
+        document.getElementById('statusHeroVine').style.display = heroVineTrap ? 'flex' : 'none';
+        document.getElementById('statusEnemyPower').style.display = enemyNextTurnMultiplier > 1 ? 'flex' : 'none';
+
+        const anyActive = mirrorEffect || vineTrap || nextTurnMultiplier > 1 || enemyMirrorEffect || heroVineTrap || enemyNextTurnMultiplier > 1;
         document.getElementById('statusContainer').style.display = anyActive ? 'flex' : 'none';
     }
 
     function updateShopUI() {
-        const set = (id, active) => { 
-            const el = document.getElementById(id); 
-            active ? el.classList.add('active') : el.classList.remove('active'); 
-            const priceEl = el.querySelector('.item-price');
-            priceEl.textContent = active ? "ATTIVO" : (id === 'shopPotion' ? '30 💰' : '25 💰');
-        };
-        set('shopPotion', items.potion); set('shopShield', items.shield);
+        const pEl = document.getElementById('shopPotion'); const pPrice = pEl.querySelector('.item-price');
+        if (items.potion > 0) { pEl.classList.add('active'); pPrice.textContent = `ATTIVO (+${items.potion})`; } else { pEl.classList.remove('active'); pPrice.textContent = "Scegli"; }
+        
+        const sEl = document.getElementById('shopShield'); const sPrice = sEl.querySelector('.item-price');
+        if(items.shield > 0) { 
+            sEl.classList.add('active'); 
+            sPrice.textContent = items.shield >= 999 ? "MAX" : `ATTIVO (-${items.shield})`; 
+        } else { 
+            sEl.classList.remove('active'); sPrice.textContent = "Scegli"; 
+        }
     }
-
     function updateUI() {
-        document.getElementById('hpBarPlayer').style.width = `${(hpPlayer/maxHpPlayer)*100}%`;
-        document.getElementById('hpPlayer').textContent = Math.max(0, hpPlayer);
-        document.getElementById('hpMaxPlayer').textContent = maxHpPlayer;
-        
-        let percentage = (hpEnemy / maxHpEnemy) * 100;
-        document.getElementById('hpBarEnemy').style.width = `${percentage}%`;
-        document.getElementById('hpEnemy').textContent = Math.max(0, hpEnemy);
-        document.getElementById('hpMaxEnemy').textContent = maxHpEnemy; 
-
-        document.getElementById('gold').textContent = gold;
-        
-        // --- MODIFICA QUI: Uso totalRounds invece di round ---
-        document.getElementById('roundCounter').textContent = totalRounds;
-        
-        for(let i=1; i<=5; i++) {
-            let dot = document.getElementById(`dot${i}`);
-            i <= chestCount ? dot.classList.add('active') : dot.classList.remove('active');
-        }
-
-        const flames = document.querySelectorAll('.combo-flame');
-        const txt = document.getElementById('comboText');
-        flames.forEach((f,i) => {
-            if(i < streak) f.classList.add('active'); else f.classList.remove('active');
-        });
-        if (streak >= 3) {
-            txt.style.display = 'block';
-            if (streak >= 5) txt.textContent = "MAX!";
-            else if (streak >= 4) txt.textContent = "x2";
-            else txt.textContent = "x1.5";
-        } else {
-            txt.style.display = 'none';
-        }
-
-        let hStats = getHeroStats(heroLevel);
-        document.getElementById('diceLabelPlayer').textContent = `1d${hStats.die}`;
+        document.getElementById('hpBarPlayer').style.width = `${(hpPlayer/maxHpPlayer)*100}%`; document.getElementById('hpPlayer').textContent = Math.max(0, hpPlayer); document.getElementById('hpMaxPlayer').textContent = maxHpPlayer;
+        let percentage = (hpEnemy / maxHpEnemy) * 100; document.getElementById('hpBarEnemy').style.width = `${percentage}%`; document.getElementById('hpEnemy').textContent = Math.max(0, hpEnemy); document.getElementById('hpMaxEnemy').textContent = maxHpEnemy; 
+        document.getElementById('gold').textContent = gold; document.getElementById('roundCounter').textContent = totalRounds;
+        for(let i=1; i<=5; i++) { let dot = document.getElementById(`dot${i}`); i <= chestCount ? dot.classList.add('active') : dot.classList.remove('active'); }
+        const flames = document.querySelectorAll('.combo-flame'); const txt = document.getElementById('comboText');
+        flames.forEach((f,i) => { if(i < streak) f.classList.add('active'); else f.classList.remove('active'); });
+        if (streak >= 3) { txt.style.display = 'block'; if (streak >= 5) txt.textContent = "MAX!"; else if (streak >= 4) txt.textContent = "x2"; else txt.textContent = "x1.5"; } else { txt.style.display = 'none'; }
+        let hStats = getHeroStats(heroLevel); document.getElementById('diceLabelPlayer').textContent = `1d${hStats.die}`;
     }
-
     function addLog(t, v, c) {
-        const l = document.getElementById('logList');
-        const e = document.createElement('div');
-        e.className = `log-entry ${c}`;
-        e.innerHTML = `<div><span class="round-badge">#${totalRounds}</span><span>${t}</span></div><strong>${v}</strong>`;
-        l.insertBefore(e, l.firstChild);
+        const l = document.getElementById('logList'); const e = document.createElement('div'); e.className = `log-entry ${c}`;
+        e.innerHTML = `<div><span class="round-badge">#${totalRounds}</span><span>${t}</span></div><strong>${v}</strong>`; l.insertBefore(e, l.firstChild);
     }
-
     initGame();
 </script>
 </body>
