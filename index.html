@@ -8,6 +8,109 @@
     
     <style>
 	
+	/* --- AGGIORNAMENTO STATS ROW --- */
+.stats-row { 
+    display: flex; 
+    justify-content: space-between; /* Distribuisce ai lati e al centro */
+    align-items: center; 
+    margin-bottom: 20px; 
+    padding: 0 5px;
+}
+
+/* Stile per i Teschi Nemici */
+.combo-skull {
+    display: inline-block; 
+    opacity: 0.2; 
+    filter: grayscale(100%);
+    font-size: 1.3em;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.combo-skull.active {
+    opacity: 1; 
+    filter: grayscale(0%) drop-shadow(0 0 6px rgba(123, 31, 162, 0.8)); /* Alone viola maligno */
+    transform: scale(1.4) translateY(-2px);
+}
+
+/* Testi Combo */
+.combo-text { font-size: 0.8em; font-weight: bold; margin-top: 5px; }
+.combo-text.hero { color: #c62828; text-align: left; }
+.combo-text.enemy { color: #7b1fa2; text-align: right; } /* Viola per nemico */
+
+/* Contenitori */
+.combo-container { display: flex; flex-direction: column; }
+.combo-container.left { align-items: flex-start; } /* Fiamme a sinistra */
+.combo-container.right { align-items: flex-end; }  /* Teschi a destra */
+
+	
+	
+	/* --- NUOVO POSIZIONAMENTO ICONE STATUS --- */
+.status-icon {
+    position: absolute;
+    top: -10px;        /* Parte dall'alto del dado */
+    right: -55px;      /* Si sposta a destra, nello spazio tra i due dadi */
+    width: 40px;       /* Larghezza fissa per creare una colonna */
+    bottom: auto;      /* Annulla il vecchio posizionamento in basso */
+    
+    display: none;     /* Gestito da JS (diventa flex) */
+    flex-direction: column; /* Le icone si impilano una sotto l'altra */
+    align-items: center;
+    gap: 8px;          /* Spazio tra le icone */
+    z-index: 50;       /* Sopra a tutto */
+}
+
+.mini-icon { 
+    width: 34px;       /* Leggermente più grandi */
+    height: 34px; 
+    border-radius: 50%; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    font-size: 1.1em;  /* Emoji più leggibile */
+    color: white; 
+    border: 2px solid white; 
+    box-shadow: 2px 2px 6px rgba(0,0,0,0.4);
+    
+    /* Piccola animazione quando appaiono */
+    animation: popIcon 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes popIcon {
+    from { transform: scale(0); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+	
+	
+	/* Effetto Sangue a Schermo Intero */
+.blood-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none; /* Importante: permette di cliccare attraverso il sangue */
+    z-index: 9999; /* Sopra a tutto, anche ai modali */
+    display: none; /* Nascosto di default */
+    justify-content: center;
+    align-items: center;
+    mix-blend-mode: multiply; /* Fonde il sangue con il gioco per realismo */
+}
+
+.blood-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Copre tutto lo schermo */
+    opacity: 0.8; /* Leggera trasparenza */
+    animation: fadeBlood 1s forwards; /* Animazione opzionale per fluidità */
+}
+
+@keyframes fadeBlood {
+    0% { opacity: 0.8; transform: scale(1); }
+    80% { opacity: 0.8; transform: scale(1.05); }
+    100% { opacity: 0; transform: scale(1.1); }
+}
+
+	
+	
 	/* Stile Epico per il Tasto Reset */
 .btn-epic-reset {
     width: 100%;
@@ -495,19 +598,35 @@
             </div>
         </div>
 
-        <div class="stats-row">
-            <div class="gold-display">💰 <span id="gold">50</span></div>
-            <div class="combo-container">
-                <div class="combo-flames">
-                    <span class="combo-flame">🔥</span>
-                    <span class="combo-flame">🔥</span>
-                    <span class="combo-flame">🔥</span>
-                    <span class="combo-flame">🔥</span>
-                    <span class="combo-flame">🔥</span>
-                </div>
-                <div class="combo-text" id="comboText">COMBO!</div>
-            </div>
-        </div>
+		<div class="stats-row">
+			<!-- SINISTRA: Combo Eroe (Fiamme) -->
+			<div class="combo-container left">
+				<div class="combo-flames">
+					<span class="combo-flame">🔥</span>
+					<span class="combo-flame">🔥</span>
+					<span class="combo-flame">🔥</span>
+					<span class="combo-flame">🔥</span>
+					<span class="combo-flame">🔥</span>
+				</div>
+				<div class="combo-text hero" id="comboTextHero" style="display:none;">COMBO!</div>
+			</div>
+
+			<!-- CENTRO: Oro -->
+			<div class="gold-display">💰 <span id="gold">50</span></div>
+
+			<!-- DESTRA: Combo Nemico (Teschi) -->
+			<div class="combo-container right">
+				<div class="combo-skulls">
+					<span class="combo-skull">💀</span>
+					<span class="combo-skull">💀</span>
+					<span class="combo-skull">💀</span>
+					<span class="combo-skull">💀</span>
+					<span class="combo-skull">💀</span>
+				</div>
+				<div class="combo-text enemy" id="comboTextEnemy" style="display:none;">FOGA!</div>
+			</div>
+		</div>
+
 
         <!-- PROGRESSO SCRIGNO -->
         <div class="chest-progress-container">
@@ -668,9 +787,19 @@
     </div>
 </div>
 
+<!-- OVERLAY EFFETTO SANGUE -->
+<div id="bloodOverlay" class="blood-overlay">
+    <img id="bloodImage" class="blood-img" src="" alt="Blood">
+</div>
+<!-- OVERLAY EFFETTO SCUDO -->
+<div id="shieldOverlay" class="blood-overlay" style="mix-blend-mode: normal;">
+    <img id="shieldImageDisplay" class="blood-img" src="https://ste388.github.io/DiceRPG/img/scudo.png" alt="Shield Block">
+</div>
+
 <script>
     // --- SETUP GLOBALE ---
     let hpPlayer, maxHpPlayer, hpEnemy, maxHpEnemy, gold, level, streak, chestCount, round, totalRounds;
+	let enemyStreak = 0; // <--- NUOVA VARIABILE
     let heroLevel = 1;
     let items = { potion: 0, shield: 0 };
     
@@ -707,6 +836,7 @@
 
     function initGame() {
         // 1. Reset Variabili Base
+		enemyStreak = 0;
         gold = 50; 
         level = 1; 
         streak = 0; 
@@ -754,6 +884,11 @@
     }
 
     function startNewLevel(isFirst) {
+	
+			if (!isFirst) hpPlayer = maxHpPlayer; 
+		round = 1;
+		enemyStreak = 0; // <--- Reset quando appare nuovo nemico
+	
         let isBoss = (level % 3 === 0);
         let eStats = getEnemyStats(level);
         maxHpEnemy = eStats.hp;
@@ -878,7 +1013,7 @@
         }, 600);
     }
 
-    function applyDamageAndLog(rollP, rollE, rawRollP, rawRollE, shieldUsed = false) {
+            function applyDamageAndLog(rollP, rollE, rawRollP, rawRollE, shieldUsed = false) {
         let hStats = getHeroStats(heroLevel);
         let eStats = getEnemyStats(level);
         let difference = Math.abs(rollP - rollE);
@@ -887,48 +1022,71 @@
         let isOpenRollEnemy = (rawRollE === eStats.die && rawRollP === 1);
 
         if (rollP > rollE) {
-            // VITTORIA EROE (o Malus Specchio Nero)
+            // --- VITTORIA EROE ---
             streak++; 
+            enemyStreak = 0; // Il nemico perde la sua foga
+            
             chestCount = Math.min(5, chestCount + 1);
             let mult = 1;
             
+            // Calcolo Danno Eroe (Open Roll + Combo)
             if (isOpenRollPlayer) { mult = 2; triggerShake(); }
+            
             let comboMult = 1;
-            if (streak >= 5) comboMult = 4; else if (streak >= 3) comboMult = 1.5;
+            if (streak >= 5) comboMult = 4; 
+            else if (streak >= 3) comboMult = 1.5;
             mult *= comboMult;
+            
+            // Bonus Chest (Furia/Potere)
             if (nextTurnMultiplier > 1) { mult *= nextTurnMultiplier; nextTurnMultiplier = 1; updateStatusIcons(); }
 
             let dmg = Math.floor(difference * mult);
             
-            // CHECK MALUS: Specchio Nero
+            // Gestione Malus: Specchio Nero (Ti colpisci da solo)
             if (enemyMirrorEffect) {
                 enemyMirrorEffect = false; updateStatusIcons();
                 hpPlayer -= dmg;
                 addLog("Specchio Nero", `Danno riflesso! (-${dmg} HP)`, "malus");
+                triggerBloodEffect();
             } else {
                 hpEnemy -= dmg; gold += dmg;
-                let extraTxt = isOpenRollPlayer ? " (TIRO APERTO!)" : (comboMult > 1 ? ` (Crit x${comboMult})` : "");
+                let extraTxt = isOpenRollPlayer ? " (TIRO APERTO!)" : (comboMult > 1 ? ` (Combo x${comboMult})` : "");
                 addLog("Inflitto", `-${dmg} HP${extraTxt}`, isOpenRollPlayer ? "critical" : "dmg-deal");
+                triggerBloodEffect();
             }
 
         } else if (rollP < rollE) {
-            // SCONFITTA EROE (o Bonus Specchio)
-            streak = 0;
+            // --- VITTORIA NEMICO ---
+            streak = 0; // L'eroe perde la sua foga
+            enemyStreak++; // Il nemico si infuria
+            
             if (mirrorEffect) {
+                // Se l'eroe ha lo specchio attivo, riflette il danno BASE
                 let dmg = difference;
                 if(isOpenRollEnemy) { dmg *= 2; triggerShake(); }
-                hpEnemy -= dmg; mirrorEffect = false; updateStatusIcons();
+                
+                hpEnemy -= dmg; 
+                mirrorEffect = false; updateStatusIcons();
                 addLog("Specchio", `Rifletti ${dmg}`, "chest");
+                triggerBloodEffect();
             } else {
+                // Calcolo Danno Nemico
                 let dmg = difference;
                 if (isOpenRollEnemy) { dmg *= 2; triggerShake(); }
 
-                // CHECK MALUS: Forza Nemica
+                // 1. Applica Moltiplicatore FOGA NEMICA
+                let eComboMult = 1;
+                if (enemyStreak >= 5) eComboMult = 4; 
+                else if (enemyStreak >= 3) eComboMult = 1.5;
+                dmg = Math.floor(dmg * eComboMult);
+
+                // 2. Applica Malus Chest (Forza Nemica)
                 if (enemyNextTurnMultiplier > 1) {
                     dmg *= enemyNextTurnMultiplier;
                     enemyNextTurnMultiplier = 1; updateStatusIcons();
                 }
 
+                // 3. Applica Scudo (Riduce il danno finale)
                 if (shieldUsed) {
                     let shieldVal = items.shield;
                     if (shieldVal >= 999) dmg = 0;
@@ -936,16 +1094,29 @@
                     
                     items.shield = 0; 
                     updateShopUI(); updateMarkers();
+					
+					 // !!! ECCO LA NUOVA CHIAMATA !!!
+                    triggerShieldEffect(); 
+                    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+					
                     addLog("Egida", `Danno ridotto a ${dmg}`, "chest");
                 }
                 
-                hpPlayer -= dmg;
-                let extraTxt = isOpenRollEnemy ? " (TIRO APERTO!)" : "";
-                if(dmg > 0) addLog("Colpito", `-${dmg} HP${extraTxt}`, isOpenRollEnemy ? "critical" : "dmg-take");
-                else if(shieldUsed && dmg === 0) addLog("Parata", "Nessun Danno", "draw");
+                // Applicazione Danno Finale
+                if(dmg > 0) {
+                    hpPlayer -= dmg;
+                    let extraTxt = isOpenRollEnemy ? " (TIRO APERTO!)" : (eComboMult > 1 ? ` (Foga x${eComboMult})` : "");
+                    addLog("Colpito", `-${dmg} HP${extraTxt}`, isOpenRollEnemy ? "critical" : "dmg-take");
+                    triggerBloodEffect();
+                } else if(shieldUsed && dmg === 0) {
+                    addLog("Parata", "Nessun Danno", "draw");
+                }
             }
         } else {
-            streak = 0; addLog("Schivata", " - ", "draw");
+            // --- PAREGGIO ---
+            streak = 0; 
+            enemyStreak = 0; // Si resetta la foga di entrambi
+            addLog("Schivata", " - ", "draw");
         }
 
         round++; totalRounds++;
@@ -961,6 +1132,8 @@
             document.getElementById('btnAttack').disabled = false;
         }
     }
+
+
 
     // --- LOGICA SCRIGNO & MALUS ---
     function openChest() {
@@ -1115,16 +1288,111 @@
             sEl.classList.remove('active'); sPrice.textContent = "Scegli"; 
         }
     }
-    function updateUI() {
-        document.getElementById('hpBarPlayer').style.width = `${(hpPlayer/maxHpPlayer)*100}%`; document.getElementById('hpPlayer').textContent = Math.max(0, hpPlayer); document.getElementById('hpMaxPlayer').textContent = maxHpPlayer;
-        let percentage = (hpEnemy / maxHpEnemy) * 100; document.getElementById('hpBarEnemy').style.width = `${percentage}%`; document.getElementById('hpEnemy').textContent = Math.max(0, hpEnemy); document.getElementById('hpMaxEnemy').textContent = maxHpEnemy; 
-        document.getElementById('gold').textContent = gold; document.getElementById('roundCounter').textContent = totalRounds;
-        for(let i=1; i<=5; i++) { let dot = document.getElementById(`dot${i}`); i <= chestCount ? dot.classList.add('active') : dot.classList.remove('active'); }
-        const flames = document.querySelectorAll('.combo-flame'); const txt = document.getElementById('comboText');
-        flames.forEach((f,i) => { if(i < streak) f.classList.add('active'); else f.classList.remove('active'); });
-        if (streak >= 3) { txt.style.display = 'block'; if (streak >= 5) txt.textContent = "MAX!"; else if (streak >= 4) txt.textContent = "x2"; else txt.textContent = "x1.5"; } else { txt.style.display = 'none'; }
-        let hStats = getHeroStats(heroLevel); document.getElementById('diceLabelPlayer').textContent = `1d${hStats.die}`;
+        function updateUI() {
+        // Barre Vita e Testi
+        document.getElementById('hpBarPlayer').style.width = `${(hpPlayer/maxHpPlayer)*100}%`; 
+        document.getElementById('hpPlayer').textContent = Math.max(0, hpPlayer); 
+        document.getElementById('hpMaxPlayer').textContent = maxHpPlayer;
+        
+        let percentage = (hpEnemy / maxHpEnemy) * 100; 
+        document.getElementById('hpBarEnemy').style.width = `${percentage}%`; 
+        document.getElementById('hpEnemy').textContent = Math.max(0, hpEnemy); 
+        document.getElementById('hpMaxEnemy').textContent = maxHpEnemy; 
+        
+        document.getElementById('gold').textContent = gold; 
+        document.getElementById('roundCounter').textContent = totalRounds;
+
+        // Chest Dots
+        for(let i=1; i<=5; i++) { 
+            let dot = document.getElementById(`dot${i}`); 
+            i <= chestCount ? dot.classList.add('active') : dot.classList.remove('active'); 
+        }
+
+        // --- GESTIONE COMBO EROE (Fiamme) ---
+        const flames = document.querySelectorAll('.combo-flame'); 
+        const txtHero = document.getElementById('comboTextHero');
+        flames.forEach((f,i) => { 
+            if(i < streak) f.classList.add('active'); else f.classList.remove('active'); 
+        });
+        if (streak >= 3) { 
+            txtHero.style.display = 'block'; 
+            txtHero.textContent = streak >= 5 ? "MAX!" : (streak >= 4 ? "x2" : "x1.5"); 
+        } else { 
+            txtHero.style.display = 'none'; 
+        }
+
+        // --- GESTIONE COMBO NEMICO (Teschi) ---
+        const skulls = document.querySelectorAll('.combo-skull'); 
+        const txtEnemy = document.getElementById('comboTextEnemy');
+        
+        // Controllo di sicurezza nel caso non avessi ancora incollato l'HTML dei teschi
+        if(skulls.length > 0) {
+            skulls.forEach((s,i) => { 
+                if(i < enemyStreak) s.classList.add('active'); else s.classList.remove('active'); 
+            });
+            if (enemyStreak >= 3) { 
+                txtEnemy.style.display = 'block'; 
+                txtEnemy.textContent = enemyStreak >= 5 ? "MAX!" : (enemyStreak >= 4 ? "x2" : "x1.5"); 
+            } else { 
+                txtEnemy.style.display = 'none'; 
+            }
+        }
+        
+        // Dadi
+        let hStats = getHeroStats(heroLevel); 
+        document.getElementById('diceLabelPlayer').textContent = `1d${hStats.die}`;
     }
+
+	
+	 // --- FUNZIONE EFFETTO SANGUE ---
+    const bloodImages = [
+        "https://ste388.github.io/DiceRPG/img/sangue.png",
+        "https://ste388.github.io/DiceRPG/img/sangue1.png",
+        "https://ste388.github.io/DiceRPG/img/sangue2.png",
+        "https://ste388.github.io/DiceRPG/img/sangue3.png",
+        "https://ste388.github.io/DiceRPG/img/sangue4.png"
+    ];
+
+    function triggerBloodEffect() {
+        const overlay = document.getElementById('bloodOverlay');
+        const img = document.getElementById('bloodImage');
+        
+        // 1. Pesca immagine a caso
+        const rnd = Math.floor(Math.random() * bloodImages.length);
+        img.src = bloodImages[rnd];
+        
+        // 2. Mostra
+        overlay.style.display = 'flex';
+        
+        // 3. Nascondi dopo 1 secondo (1000 ms)
+        // Nota: Rimuoviamo e riaggiungiamo la classe per riavviare l'animazione CSS ogni volta
+        img.classList.remove('blood-img');
+        void img.offsetWidth; // Trigger reflow
+        img.classList.add('blood-img');
+
+        setTimeout(() => {
+            overlay.style.display = 'none';
+        }, 1000);
+    }
+	
+	function triggerShieldEffect() {
+        const overlay = document.getElementById('shieldOverlay');
+        const img = document.getElementById('shieldImageDisplay');
+
+        // Mostra
+        overlay.style.display = 'flex';
+        
+        // Reset Animazione
+        img.classList.remove('blood-img');
+        void img.offsetWidth; // Force reflow
+        img.classList.add('blood-img');
+
+        // Nascondi dopo 1 secondo
+        setTimeout(() => {
+            overlay.style.display = 'none';
+        }, 1000);
+    }
+	
     function addLog(t, v, c) {
         const l = document.getElementById('logList'); const e = document.createElement('div'); e.className = `log-entry ${c}`;
         e.innerHTML = `<div><span class="round-badge">#${totalRounds}</span><span>${t}</span></div><strong>${v}</strong>`; l.insertBefore(e, l.firstChild);
