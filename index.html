@@ -562,9 +562,48 @@
         }
         .report-val { color: #ffca28; font-weight: bold; }
 
+/* Stile Classifica */
+.leaderboard-header {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+    background: rgba(0,0,0,0.3);
+    color: #ffd700;
+    font-weight: bold;
+    border-bottom: 2px solid #5d4037;
+    margin-bottom: 5px;
+}
+.leaderboard-header span { width: 25%; text-align: center; }
+
+.leaderboard-list {
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: 20px;
+}
+
+.score-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 10px;
+    border-bottom: 1px solid rgba(93, 64, 55, 0.3);
+    font-size: 0.95em;
+    color: #3e2723;
+}
+.score-row:nth-child(odd) { background: rgba(255,255,255,0.1); }
+.score-row span { width: 25%; text-align: center; }
+.score-row.gold-record { color: #d84315; font-weight: bold; background: rgba(255, 215, 0, 0.2); }
+
+/* Nascondi bottone salva se già salvato */
+.btn-disabled { opacity: 0.5; pointer-events: none; filter: grayscale(1); }
+
     </style>
 </head>
 <body>
+
+<!-- FIREBASE (Versione 9 compatibile modulare - usiamo versione 8 compat per semplicità in file unico) -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
 
 <!-- EFFETTI SONORI -->
 <audio id="sfxSword1" src="https://ste388.github.io/DiceRPG/fx/spada1.mp3" preload="auto"></audio>
@@ -590,6 +629,11 @@
 
 <div class="main-wrapper">
     
+	<div id="leaderboardBtn" onclick="showLeaderboard(false)" style="position:fixed; top:10px; right:10px; z-index:100; cursor:pointer; background:rgba(0,0,0,0.5); padding:8px; border-radius:10px; border:2px solid #ffd700; color:#ffd700; font-family:'MedievalSharp'; font-size:1em;">
+    🏆 Classifica
+</div>
+	
+	
     <!-- SINISTRA (Su Mobile va in basso) -->
     <div class="card history-panel">
         <div class="history-title">Cronache</div>
@@ -703,7 +747,7 @@
             <button class="btn-style btn-attack" id="btnAttack" onclick="resolveCombatStart()">⚔️ Attacco</button>
             <div class="chest-actions" id="chestActions">
                 <button class="btn-style btn-open" onclick="openChest()">🎁 Apri</button>
-                <button class="btn-style btn-ignore" onclick="ignoreChest()">Ignora</button>
+           <!-- <button class="btn-style btn-ignore" onclick="ignoreChest()">Ignora</button> -->
             </div>
         </div>
 
@@ -722,6 +766,12 @@
 			<button class="btn-epic-reset" onclick="initGame()">
 				💀 Risorgi e Combatti
 			</button>
+			
+			<!-- NUOVO PULSANTE -->
+<button id="btnSaveScore" class="btn-style" onclick="promptSaveScore()" style="width:100%; margin-top:15px; background:#4a148c; border:2px solid #ab47bc; font-size:1.2em;">
+    📜 Segna le tue Gesta
+</button>
+			
 		</div>
 
 
@@ -809,6 +859,34 @@
     </div>
 </div>
 
+<div class="modal-overlay" id="nameInputModal">
+    <div class="modal-content">
+        <div style="font-family:'MedievalSharp'; font-size:1.5em; color:#ffd700; margin-bottom:15px;">Chi sei, valoroso?</div>
+        <input type="text" id="heroNameInput" maxlength="12" placeholder="Nome Eroe" style="width:80%; padding:10px; font-size:1.2em; text-align:center; border:2px solid #5d4037; background:#d7ccc8; color:#3e2723; margin-bottom:20px; font-family:'MedievalSharp';">
+        <button class="btn-modal" onclick="confirmSaveScore()">Incidi nella Pietra</button>
+        <button class="btn-modal btn-close" onclick="closeNameModal()">Annulla</button>
+    </div>
+</div>
+
+<div class="modal-overlay" id="leaderboardModal">
+    <div class="modal-content" style="max-width:500px; width:95%;">
+        <div style="font-family:'MedievalSharp'; font-size:2em; color:#ffd700; margin-bottom:10px;">🏆 ALBO DEGLI EROI</div>
+        
+        <div class="leaderboard-header">
+            <span>Eroe</span>
+            <span>Lvl</span>
+            <span>Oro</span>
+            <span>Rnd</span>
+        </div>
+        <div id="leaderboardList" class="leaderboard-list">
+            <!-- Qui verranno inseriti i record via JS -->
+        </div>
+
+        <button class="btn-modal btn-close" onclick="closeLeaderboard()">Chiudi</button>
+    </div>
+</div>
+
+
 <!-- OVERLAY EFFETTO SANGUE -->
 <div id="bloodOverlay" class="blood-overlay">
     <img id="bloodImage" class="blood-img" src="" alt="Blood">
@@ -819,6 +897,27 @@
 </div>
 
 <script>
+
+    // --- CONFIGURAZIONE FIREBASE ---
+    // SOSTITUISCI QUESTO BLOCCO CON I TUOI DATI VERI DA FIREBASE CONSOLE
+    const firebaseConfig = {
+        apiKey: "AIzaSyBB1XWijbDHgpId7jXOo7003vPKW_cn1N0",
+        authDomain: "dicerpg-leaderboard.firebaseapp.com",
+        databaseURL: "https://dicerpg-leaderboard-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "dicerpg-leaderboard",
+        sstorageBucket: "dicerpg-leaderboard.firebasestorage.app",
+		messagingSenderId: "650886160110",
+		appId: "1:650886160110:web:bfcc221b8151e934fb5dff"
+    };
+
+    // Inizializza Firebase
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.database();
+
+
+
     // --- SETUP GLOBALE ---
     let hpPlayer, maxHpPlayer, hpEnemy, maxHpEnemy, gold, level, streak, chestCount, round, totalRounds;
     let enemyStreak = 0;
@@ -911,17 +1010,40 @@
 
     // --- INIT ---
     function initGame() {
-        gold = 50; level = 1; streak = 0; chestCount = 0;
-        totalRounds = 1; heroLevel = 1; enemyStreak = 0;
+        // --- 1. RESET VARIABILI DI GIOCO ---
+        gold = 50; 
+        level = 1; 
+        streak = 0; 
+        chestCount = 0;
+        totalRounds = 1; 
+        heroLevel = 1; 
+        enemyStreak = 0;
+        
+        // Flag Classifica: permette di salvare di nuovo
+        hasSavedScore = false; 
 
+        // --- 2. AGGIORNAMENTO UI IMMEDIATO ---
         document.getElementById('heroNameDisplay').innerHTML = `Eroe <span style="font-size:0.7em; color:#8d6e63; margin-left:5px;">Lv.${heroLevel}</span>`;
         
-        let stats = getHeroStats(1);
-        maxHpPlayer = stats.maxHp; hpPlayer = maxHpPlayer;
+        // Reset Bottone "Segna le tue Gesta" (rimuove stato disabilitato)
+        const btnSave = document.getElementById('btnSaveScore');
+        if(btnSave) {
+            btnSave.classList.remove('btn-disabled');
+            btnSave.innerHTML = "📜 Segna le tue Gesta";
+			btnSave.style.display = 'block'; // Assicuriamoci che sia visibile
+            btnSave.disabled = false; // Assicuriamoci che sia cliccabile
+        }
 
+        // --- 3. CALCOLO STATS INIZIALI ---
+        let stats = getHeroStats(1);
+        maxHpPlayer = stats.maxHp; 
+        hpPlayer = maxHpPlayer;
+
+        // --- 4. RESET ITEM E EFFETTI ---
         items = { potion: 0, shield: 0 };
         resetEffects(); 
 
+        // --- 5. PULIZIA INTERFACCIA ---
         document.getElementById('logList').innerHTML = '';
         document.getElementById('overlay').style.display = 'none';
         document.getElementById('heroLevelModal').style.display = 'none';
@@ -929,20 +1051,57 @@
         document.getElementById('levelUpModal').style.display = 'none'; 
         document.getElementById('potionModal').style.display = 'none';
         document.getElementById('shieldModal').style.display = 'none';
+        // Chiudi eventuali modali classifica/nome aperti
+        document.getElementById('nameInputModal').style.display = 'none';
+        document.getElementById('leaderboardModal').style.display = 'none';
         
         document.getElementById('btnAttack').style.display = 'block';
         document.getElementById('btnAttack').disabled = false;
         document.getElementById('chestActions').style.display = 'none';
 
-        // Reset Musica
+        // --- 6. RESET MUSICA ---
+        // (Opzionale: se vuoi che riparta dall'inizio a ogni partita, altrimenti togli queste righe)
         const bg = document.getElementById('bgMusic');
-        if (bg) { bg.pause(); bg.currentTime = 0; }
-        bgStarted = false;
+        if (bg) { 
+            bg.pause(); 
+            bg.currentTime = 0; 
+        }
+        bgStarted = false; // Richiederà un nuovo click su Attacco per ripartire
 
-        updateShopUI(); updateMarkers();
-        startNewLevel(true); updateUI();
+        // --- 7. AVVIO EFFETTIVO ---
+        updateShopUI(); 
+        updateMarkers();
+        startNewLevel(true); 
+        updateUI();
     }
 
+function promptSaveScore() {
+        console.log("Tentativo apertura modale nome..."); // Debug
+        
+        if (hasSavedScore) {
+            console.log("Punteggio già salvato, ignoro click.");
+            return; 
+        }
+
+        const modal = document.getElementById('nameInputModal');
+        if (modal) {
+            modal.style.display = 'flex';
+            // Focus sul campo input per comodità
+            setTimeout(() => {
+                const input = document.getElementById('heroNameInput');
+                if(input) {
+                    input.value = ''; 
+                    input.focus();
+                }
+            }, 100);
+        } else {
+            console.error("ERRORE: Modale 'nameInputModal' non trovato nell'HTML!");
+            alert("Errore interno: Modale nome non trovato.");
+        }
+    }
+	
+	
+	
     function resetEffects() {
         nextTurnMultiplier = 1; mirrorEffect = false; vineTrap = false; 
         enemyNextTurnMultiplier = 1; enemyMirrorEffect = false; heroVineTrap = false;
@@ -1181,7 +1340,7 @@
     }
 
     // --- LOGICA SCRIGNO & MALUS ---
-    function openChest() {
+        function openChest() {
         const chestSfx = document.getElementById('sfxChest');
         if (chestSfx) { chestSfx.currentTime = 0; chestSfx.volume = 0.7; chestSfx.play().catch(()=>{}); }
 
@@ -1189,20 +1348,86 @@
         let rand = Math.random() * 100;
         let t, d, e, isMalus = false;
 
-        if (rand < 50) { let g = Math.floor(Math.random() * 30) + 30; gold += g; t = "Tesoro"; d = `+${g} Monete`; e = "💰"; }
-        else if (rand < 62.5) { nextTurnMultiplier = 2; t = "Furia"; d = "Prox attacco x2"; e = "⚔️"; }
-        else if (rand < 75) { enemyNextTurnMultiplier = 2; isMalus = true; t = "Forza Nemica"; d = "Nemico attacco x2"; e = "👹"; }
-        else if (rand < 85) { nextTurnMultiplier = 3; t = "Potere"; d = "Prox attacco x3"; e = "⚡"; }
-        else if (rand < 90) { mirrorEffect = true; t = "Specchio"; d = "Rifletti danno"; e = "🪞"; }
-        else if (rand < 95) { enemyMirrorEffect = true; isMalus = true; t = "Specchio Nero"; d = "Nemico riflette danno"; e = "🖤"; }
-        else if (rand < 97.5) { vineTrap = true; t = "Radici"; d = "Nemico dado 0"; e = "🌿"; }
-        else { heroVineTrap = true; isMalus = true; t = "Edera Nera"; d = "Tuo dado 0"; e = "🥀"; }
+        // --- DISTRIBUZIONE PROBABILITÀ COMPLETA (Totale: 100%) ---
+        
+        // 42% ORO (0-42)
+        if (rand < 42) { 
+            let g = Math.floor(Math.random() * 30) + 30; 
+            gold += g;
+            t = "Tesoro"; 
+            d = `+${g} Monete`; 
+            e = "💰";
+        }
+        // 12% FURIA (42 - 54)
+        else if (rand < 54) {
+            nextTurnMultiplier = 2; 
+            t = "Furia"; 
+            d = "Prox attacco x2"; 
+            e = "⚔️";
+        }
+        // 11% FORZA NEMICA (MALUS) (54 - 65)
+        else if (rand < 65) {
+            enemyNextTurnMultiplier = 2; 
+            isMalus = true;
+            t = "Forza Nemica"; 
+            d = "Nemico attacco x2"; 
+            e = "👹";
+        }
+        // 10% FURFANTE (MALUS) (65 - 75)
+        else if (rand < 75) {
+            let stolenAmount = Math.floor(gold * 0.45); // 45% delle monete
+            gold -= stolenAmount;
+            gold = Math.max(0, gold); // Non andare sotto zero
+            isMalus = true;
+            t = "Furfante!"; 
+            d = `Il furfante ti ruba ${stolenAmount} monete!`; 
+            e = "🦹";
+        }
+        // 10% POTERE (75 - 85)
+        else if (rand < 85) {
+            nextTurnMultiplier = 3; 
+            t = "Potere"; 
+            d = "Prox attacco x3"; 
+            e = "⚡";
+        }
+        // 5% SPECCHIO (85 - 90)
+        else if (rand < 90) {
+            mirrorEffect = true; 
+            t = "Specchio"; 
+            d = "Rifletti danno"; 
+            e = "🪞";
+        }
+        // 5% SPECCHIO NERO (MALUS) (90 - 95)
+        else if (rand < 95) {
+            enemyMirrorEffect = true; 
+            isMalus = true;
+            t = "Specchio Nero"; 
+            d = "Nemico riflette danno"; 
+            e = "🖤";
+        }
+        // 2.5% RADICI (95 - 97.5)
+        else if (rand < 97.5) {
+            vineTrap = true; 
+            t = "Radici"; 
+            d = "Nemico dado 0"; 
+            e = "🌿";
+        }
+        // 2.5% EDERA NERA (MALUS) (97.5 - 100)
+        else {
+            heroVineTrap = true; 
+            isMalus = true;
+            t = "Edera Nera"; 
+            d = "Tuo dado 0"; 
+            e = "🥀";
+        }
 
         showChestReward(t, d, e, isMalus);
-        updateStatusIcons(); updateUI();
+        updateStatusIcons(); 
+        updateUI();
         document.getElementById('chestActions').style.display = 'none';
         document.getElementById('btnAttack').style.display = 'block';
     }
+
 
     function showChestReward(t, d, e, isMalus) {
         const modal = document.getElementById('chestModalContent');
@@ -1277,7 +1502,11 @@
         document.getElementById('chestActions').style.display = 'none';
         startNewLevel(); 
     }
-    
+	
+        function closeLeaderboard() {
+        document.getElementById('leaderboardModal').style.display = 'none';
+    }
+	
     function updateMarkers() {
         const pMarker = document.getElementById('markerPotion');
         if(items.potion > 0) { pMarker.style.display = 'flex'; pMarker.textContent = '+' + items.potion; } else { pMarker.style.display = 'none'; }
@@ -1325,7 +1554,114 @@
         const l = document.getElementById('logList'); const e = document.createElement('div'); e.className = `log-entry ${c}`;
         e.innerHTML = `<div><span class="round-badge">#${totalRounds}</span><span>${t}</span></div><strong>${v}</strong>`; l.insertBefore(e, l.firstChild);
     }
-    
+	
+        const MAX_RECORDS = 25;
+		let hasSavedScore = false;
+		
+	    function closeNameModal() {
+        const modal = document.getElementById('nameInputModal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    function promptSaveScore() {
+        if (hasSavedScore) return; 
+        document.getElementById('nameInputModal').style.display = 'flex';
+        // Focus sul campo input
+        setTimeout(() => {
+            const input = document.getElementById('heroNameInput');
+            if(input) { input.value = ''; input.focus(); }
+        }, 100);
+    }
+	
+	
+    // Funzione per salvare (Scrive su Cloud)
+    function confirmSaveScore() {
+        const name = document.getElementById('heroNameInput').value.trim() || "Sconosciuto";
+        const btn = document.getElementById('btnSaveScore');
+        
+        // Disabilita subito per evitare doppi click
+        btn.innerHTML = "⏳ Salvataggio...";
+        btn.classList.add('btn-disabled');
+
+        const newRecord = {
+            name: name,
+            level: heroLevel,
+            gold: gold,
+            rounds: totalRounds - 1,
+            date: new Date().toISOString(),
+            timestamp: firebase.database.ServerValue.TIMESTAMP 
+        };
+
+        // Scrivi su Firebase
+        const newRef = db.ref('leaderboard').push();
+        newRef.set(newRecord)
+            .then(() => {
+                hasSavedScore = true;
+                closeNameModal();
+                btn.innerHTML = "✅ Gesta Incise (Online)";
+                showLeaderboard(true); 
+            })
+            .catch((error) => {
+                console.error("Firebase write error:", error);
+                alert(`Errore Firebase: ${error.code || "no-code"}\n${error.message || error}`);
+                
+                if (btn) {
+                    btn.innerHTML = "❌ Errore";
+                    btn.classList.remove('btn-disabled');
+                }
+            });
+    } // <--- QUESTA MANCAVA!
+
+
+
+    // Funzione per leggere e mostrare (Legge da Cloud)
+    function showLeaderboard(fromGameOver) {
+        const list = document.getElementById('leaderboardList');
+        list.innerHTML = '<div style="padding:20px; text-align:center; color:#ccc;">Caricamento classifica globale...</div>';
+        document.getElementById('leaderboardModal').style.display = 'flex';
+
+        // Leggi da Firebase
+        // Ordina per 'rounds' (Firebase ordina ascendente, quindi dovremo invertire l'array)
+        db.ref('leaderboard').orderByChild('rounds').limitToLast(MAX_RECORDS).once('value')
+            .then((snapshot) => {
+                list.innerHTML = '';
+                const records = [];
+                
+                snapshot.forEach((childSnapshot) => {
+                    records.push(childSnapshot.val());
+                });
+
+                // Inverti perché Firebase restituisce dal più piccolo al più grande (limitToLast prende i più grandi)
+                // Quindi ora abbiamo [10, 20, 30]. Invertiamo -> [30, 20, 10]
+                records.reverse();
+
+                if (records.length === 0) {
+                    list.innerHTML = '<div style="padding:20px; text-align:center;">Nessun eroe ha ancora osato.</div>';
+                } else {
+                    records.forEach((rec, index) => {
+                        const row = document.createElement('div');
+                        row.className = 'score-row';
+                        if (index < 3) row.classList.add('gold-record');
+
+                        let displayName = rec.name.length > 10 ? rec.name.substring(0,10)+'..' : rec.name;
+
+                        row.innerHTML = `
+                            <span style="text-align:left;">${index+1}. ${displayName}</span>
+                            <span>${rec.level}</span>
+                            <span>${rec.gold}</span>
+                            <span>${rec.rounds}</span>
+                        `;
+                        list.appendChild(row);
+                    });
+                }
+            })
+            .catch((error) => {
+                console.error("Errore lettura:", error);
+                list.innerHTML = '<div style="padding:20px; text-align:center; color:red;">Errore caricamento dati.</div>';
+            });
+    }
+	
+	
     initGame();
 </script>
 
