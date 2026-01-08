@@ -620,7 +620,8 @@
 <audio id="sfxChest" src="https://ste388.github.io/DiceRPG/fx/cesta.mp3" preload="auto"></audio>
 <audio id="sfxFlame" src="https://ste388.github.io/DiceRPG/fx/fiamma.mp3" preload="auto"></audio>
 <audio id="sfxSkull" src="https://ste388.github.io/DiceRPG/fx/scheletro.mp3" preload="auto"></audio>
-
+<audio id="bgBoss" src="https://ste388.github.io/DiceRPG/fx/boss.mp3" preload="auto" loop></audio>
+<audio id="bgEndGame" src="https://ste388.github.io/DiceRPG/fx/endGame.mp3" preload="auto" loop></audio>
 
 <!-- PULSANTE MUTE -->
 <div id="muteBtn" onclick="toggleMusic()" style="position:fixed; top:10px; left:10px; z-index:100; cursor:pointer; background:rgba(0,0,0,0.5); padding:8px; border-radius:50%; border:2px solid #fff; width:40px; height:40px; display:flex; justify-content:center; align-items:center; color:#fff; font-size:1.2em;">
@@ -629,8 +630,15 @@
 
 <div class="main-wrapper">
     
-	<div id="leaderboardBtn" onclick="showLeaderboard(false)" style="position:fixed; top:10px; right:10px; z-index:100; cursor:pointer; background:rgba(0,0,0,0.5); padding:8px; border-radius:10px; border:2px solid #ffd700; color:#ffd700; font-family:'MedievalSharp'; font-size:1em;">
-    🏆 Classifica
+<div id="leaderboardBtn" onclick="showLeaderboard(false)" 
+     style="position:fixed; top:10px; right:10px; z-index:100; cursor:pointer; 
+            background:rgba(0,0,0,0.5); padding:0; 
+            border-radius:50%; border:2px solid #ffd700; 
+            width:40px; height:40px; 
+            display:flex; justify-content:center; align-items:center; 
+            color:#ffd700; font-size:1.2em; 
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);">
+    🏆
 </div>
 	
 	
@@ -950,16 +958,78 @@
         }
     }
 
-    function toggleMusic() {
+
+    // --- GESTIONE CAMBIO MUSICA ---
+    function playMusicState(state) {
         const bg = document.getElementById('bgMusic');
-        const btn = document.getElementById('muteBtn');
-        if (bg.muted) {
-            bg.muted = false; btn.innerHTML = "🔊";
-            if (bg.paused && bgStarted) bg.play().catch(()=>{});
-        } else {
-            bg.muted = true; btn.innerHTML = "🔇";
+        const boss = document.getElementById('bgBoss');
+        const end = document.getElementById('bgEndGame');
+
+        // Sincronizza lo stato di mute su tutti gli elementi prima di farli partire
+        if (bg) bg.muted = isMuted;
+        if (boss) boss.muted = isMuted;
+        if (end) end.muted = isMuted;
+
+        // Ferma tutto
+        if (bg) bg.pause();
+        if (boss) boss.pause();
+        if (end) end.pause();
+
+        // Avvia la traccia giusta
+        if (state === 'normal') {
+            if (bg) { 
+                bg.currentTime = 0; bg.volume = 0.18; 
+                bg.play().catch(()=>{}); 
+                bgStarted = true;
+            }
+        } 
+        else if (state === 'boss') {
+            if (boss) { 
+                boss.currentTime = 0; boss.volume = 0.3; 
+                boss.play().catch(()=>{}); 
+            }
+        } 
+        else if (state === 'gameover') {
+            if (end) { 
+                end.currentTime = 0; end.volume = 0.4; 
+                end.play().catch(()=>{}); 
+            }
         }
     }
+
+
+
+
+    // --- GESTIONE MUTE TOTALE ---
+    let isMuted = false; // Stato globale del mute
+
+    function toggleMusic() {
+        const bg = document.getElementById('bgMusic');
+        const boss = document.getElementById('bgBoss');
+        const end = document.getElementById('bgEndGame');
+        const btn = document.getElementById('muteBtn');
+
+        isMuted = !isMuted; // Inverti lo stato
+
+        if (isMuted) {
+            // MUTA TUTTO
+            if (bg) bg.muted = true;
+            if (boss) boss.muted = true;
+            if (end) end.muted = true;
+            btn.innerHTML = "🔇";
+        } else {
+            // RIATTIVA TUTTO
+            if (bg) { bg.muted = false; if (bgStarted && bg.paused && !boss.duration && !end.duration) bg.play().catch(()=>{}); }
+            if (boss) boss.muted = false;
+            if (end) end.muted = false;
+            btn.innerHTML = "🔊";
+            
+            // Logica opzionale per far ripartire la traccia corrente se era in pausa forzata? 
+            // Solitamente basta togliere il mute, se il browser l'aveva messo in pausa serve un play esplicito, 
+            // ma con .muted = false l'audio continua se era in play.
+        }
+    }
+
 
     function playFightSfx() {
         const a = document.getElementById('sfxFight');
@@ -1059,13 +1129,14 @@
         document.getElementById('btnAttack').disabled = false;
         document.getElementById('chestActions').style.display = 'none';
 
-        // --- 6. RESET MUSICA ---
-        // (Opzionale: se vuoi che riparta dall'inizio a ogni partita, altrimenti togli queste righe)
-        const bg = document.getElementById('bgMusic');
-        if (bg) { 
-            bg.pause(); 
-            bg.currentTime = 0; 
-        }
+           // --- 6. RESET MUSICA ---
+    // Resetta lo stato audio per prepararsi al click dell'utente
+    const bg = document.getElementById('bgMusic');
+    const boss = document.getElementById('bgBoss');
+    const end = document.getElementById('bgEndGame');
+    if(bg) { bg.pause(); bg.currentTime = 0; }
+    if(boss) { boss.pause(); boss.currentTime = 0; }
+    if(end) { end.pause(); end.currentTime = 0; }
         bgStarted = false; // Richiederà un nuovo click su Attacco per ripartire
 
         // --- 7. AVVIO EFFETTIVO ---
@@ -1122,12 +1193,28 @@ function promptSaveScore() {
         const panel = document.getElementById('gamePanel');
         const alert = document.getElementById('bossAlert');
         
-        if(isBoss) { panel.classList.add('boss-mode'); alert.style.display = 'block'; } 
-        else { panel.classList.remove('boss-mode'); alert.style.display = 'none'; }
+        if (isBoss) { 
+            panel.classList.add('boss-mode'); 
+            alert.style.display = 'block'; 
+            
+            // --- MUSICA BOSS ---
+            playMusicState('boss');
+        } 
+        else { 
+            panel.classList.remove('boss-mode'); 
+            alert.style.display = 'none'; 
+            
+            // --- MUSICA NORMALE ---
+            // Se arrivo da un boss, devo rimettere quella normale.
+            // Se è il primo livello (isFirst), aspettiamo il click utente (resolveCombatStart), 
+            // ma se il gioco è già in corso (level > 1), la switchiamo subito.
+            if (!isFirst) playMusicState('normal');
+        }
         
         playFightSfx();
         updateUI();
     }
+
 
     // --- COMBAT FLOW ---
     function resolveCombatStart() {
@@ -1479,10 +1566,18 @@ function promptSaveScore() {
             return true; 
         }
         if (hpPlayer <= 0) {
-            document.getElementById('endLevel').textContent = heroLevel; document.getElementById('endGold').textContent = gold;
-            document.getElementById('endRounds').textContent = totalRounds - 1; document.getElementById('overlay').style.display = 'flex'; return true;
-        } return false;
+            // --- MUSICA GAME OVER ---
+            playMusicState('gameover');
+
+            document.getElementById('endLevel').textContent = heroLevel; 
+            document.getElementById('endGold').textContent = gold;
+            document.getElementById('endRounds').textContent = totalRounds - 1; 
+            document.getElementById('overlay').style.display = 'flex'; 
+            return true;
+        } 
+        return false;
     }
+
     function showLevelUpModal() {
         const deathSfx = document.getElementById('sfxDeath');
         if (deathSfx) { deathSfx.currentTime = 0; deathSfx.volume = 0.7; deathSfx.play().catch(()=>{}); }
