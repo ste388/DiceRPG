@@ -6,7 +6,7 @@
     <title>Kingdom's Dice RPG - Malus Chest</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=MedievalSharp&display=swap" rel="stylesheet">
     
-		<!-- PWA CONFIG -->
+	<!-- PWA CONFIG -->
 	<link rel="manifest" href="manifest.json">
 	<meta name="theme-color" content="#ffd700">
 	<link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -24,6 +24,14 @@
 	
 	
     <style>
+	
+	/* BLOCCO PULL-TO-REFRESH */
+html, body {
+    overscroll-behavior-y: contain; 
+    /* Oppure 'none' per essere ancora più drastici */
+    overscroll-behavior: none;
+}
+	
 	
 	/* --- AGGIORNAMENTO STATS ROW --- */
 .stats-row { 
