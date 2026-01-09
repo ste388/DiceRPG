@@ -1204,12 +1204,21 @@ function promptSaveScore() {
         updateStatusIcons();
     }
 
-    function startNewLevel(isFirst) {
+        function startNewLevel(isFirst) {
         let isBoss = (level % 3 === 0);
         let eStats = getEnemyStats(level);
         maxHpEnemy = eStats.hp; hpEnemy = maxHpEnemy;
 
-        document.getElementById('diceLabelEnemy').textContent = `1d${eStats.die}`;
+        // SE BOSS: Aggiunge la scritta (+1)
+        if (isBoss) {
+            document.getElementById('diceLabelEnemy').textContent = `1d${eStats.die} (+1)`;
+            document.getElementById('diceLabelEnemy').style.color = '#d32f2f'; // Rosso minaccioso
+            document.getElementById('diceLabelEnemy').style.fontWeight = 'bold';
+        } else {
+            document.getElementById('diceLabelEnemy').textContent = `1d${eStats.die}`;
+            document.getElementById('diceLabelEnemy').style.color = '#5d4037'; // Marrone standard
+            document.getElementById('diceLabelEnemy').style.fontWeight = 'normal';
+        }
 
         if (!isFirst) hpPlayer = maxHpPlayer; 
         round = 1; enemyStreak = 0;
@@ -1221,24 +1230,18 @@ function promptSaveScore() {
         if (isBoss) { 
             panel.classList.add('boss-mode'); 
             alert.style.display = 'block'; 
-            
-            // --- MUSICA BOSS ---
             playMusicState('boss');
         } 
         else { 
             panel.classList.remove('boss-mode'); 
             alert.style.display = 'none'; 
-            
-            // --- MUSICA NORMALE ---
-            // Se arrivo da un boss, devo rimettere quella normale.
-            // Se è il primo livello (isFirst), aspettiamo il click utente (resolveCombatStart), 
-            // ma se il gioco è già in corso (level > 1), la switchiamo subito.
             if (!isFirst) playMusicState('normal');
         }
         
         playFightSfx();
         updateUI();
     }
+
 
 
     // --- COMBAT FLOW ---
@@ -1259,20 +1262,30 @@ function promptSaveScore() {
         setTimeout(resolveCombatAnimation, 600);
     }
 
-    function resolveCombatAnimation() {
+        function resolveCombatAnimation() {
         let hStats = getHeroStats(heroLevel);
         let eStats = getEnemyStats(level);
+        let isBoss = (level % 3 === 0); // Controllo Boss
         
         let rawRollP = Math.floor(Math.random() * hStats.die) + 1;
         let rawRollE = Math.floor(Math.random() * eStats.die) + 1;
-        let rollP = rawRollP; let rollE = rawRollE;
+        
+        let rollP = rawRollP; 
+        let rollE = rawRollE;
+
+        // BONUS BOSS
+        if (isBoss) {
+            rollE += 1; // Aggiunge +1 al totale
+        }
 
         // Trappole
         if (vineTrap) { rollP = 0; rawRollP = 0; vineTrap = false; updateStatusIcons(); }
         if (heroVineTrap) { rollP = 0; rawRollP = 0; heroVineTrap = false; addLog("Edera Nera", "Il tuo dado è bloccato!", "malus"); updateStatusIcons(); }
 
         document.getElementById('dadoPlayer').textContent = rollP;
-        document.getElementById('dadoEnemy').textContent = rollE;
+        
+        // MOSTRA IL RISULTATO NEMICO CORRETTO (Base + 1)
+        document.getElementById('dadoEnemy').textContent = rollE; 
 
         // Pozione
         if (items.potion > 0 && rollP > 0) {
