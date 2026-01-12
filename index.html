@@ -1747,52 +1747,58 @@ function promptSaveScore() {
 
 
 
-    // Funzione per leggere e mostrare (Legge da Cloud)
-    function showLeaderboard(fromGameOver) {
-        const list = document.getElementById('leaderboardList');
-        list.innerHTML = '<div style="padding:20px; text-align:center; color:#ccc;">Caricamento classifica globale...</div>';
-        document.getElementById('leaderboardModal').style.display = 'flex';
+// Funzione per leggere e mostrare (Legge da Cloud)
+function showLeaderboard(fromGameOver) {
+    const list = document.getElementById('leaderboardList');
+    list.innerHTML = '<div style="padding:20px; text-align:center; color:#ccc;">Caricamento classifica globale...</div>';
+    document.getElementById('leaderboardModal').style.display = 'flex';
 
-        // Leggi da Firebase
-        // Ordina per 'rounds' (Firebase ordina ascendente, quindi dovremo invertire l'array)
-        db.ref('leaderboard').orderByChild('rounds').limitToLast(MAX_RECORDS).once('value')
-            .then((snapshot) => {
-                list.innerHTML = '';
-                const records = [];
-                
-                snapshot.forEach((childSnapshot) => {
-                    records.push(childSnapshot.val());
-                });
-
-                // Inverti perché Firebase restituisce dal più piccolo al più grande (limitToLast prende i più grandi)
-                // Quindi ora abbiamo [10, 20, 30]. Invertiamo -> [30, 20, 10]
-                records.reverse();
-
-                if (records.length === 0) {
-                    list.innerHTML = '<div style="padding:20px; text-align:center;">Nessun eroe ha ancora osato.</div>';
-                } else {
-                    records.forEach((rec, index) => {
-                        const row = document.createElement('div');
-                        row.className = 'score-row';
-                        if (index < 3) row.classList.add('gold-record');
-
-                        let displayName = rec.name.length > 10 ? rec.name.substring(0,10)+'..' : rec.name;
-
-                        row.innerHTML = `
-                            <span style="text-align:left;">${index+1}. ${displayName}</span>
-                            <span>${rec.level}</span>
-                            <span>${rec.gold}</span>
-                            <span>${rec.rounds}</span>
-                        `;
-                        list.appendChild(row);
-                    });
-                }
-            })
-            .catch((error) => {
-                console.error("Errore lettura:", error);
-                list.innerHTML = '<div style="padding:20px; text-align:center; color:red;">Errore caricamento dati.</div>';
+    // Leggi da Firebase
+    db.ref('leaderboard').orderByChild('rounds').limitToLast(MAX_RECORDS).once('value')
+        .then((snapshot) => {
+            list.innerHTML = '';
+            const records = [];
+            
+            snapshot.forEach((childSnapshot) => {
+                records.push(childSnapshot.val());
             });
-    }
+
+            // ORDINA: prima per rounds (DESC), poi per gold (DESC)
+            records.sort((a, b) => {
+                if (a.rounds === b.rounds) {
+                    // A parità di round, chi ha più oro viene prima
+                    return b.gold - a.gold;
+                }
+                // Più round = più in alto
+                return b.rounds - a.rounds;
+            });
+
+            if (records.length === 0) {
+                list.innerHTML = '<div style="padding:20px; text-align:center;">Nessun eroe ha ancora osato.</div>';
+            } else {
+                records.forEach((rec, index) => {
+                    const row = document.createElement('div');
+                    row.className = 'score-row';
+                    if (index < 3) row.classList.add('gold-record');
+
+                    let displayName = rec.name.length > 10 ? rec.name.substring(0,10)+'..' : rec.name;
+
+                    row.innerHTML = `
+                        <span style="text-align:left;">${index+1}. ${displayName}</span>
+                        <span>${rec.level}</span>
+                        <span>${rec.gold}</span>
+                        <span>${rec.rounds}</span>
+                    `;
+                    list.appendChild(row);
+                });
+            }
+        })
+        .catch((error) => {
+            console.error("Errore lettura:", error);
+            list.innerHTML = '<div style="padding:20px; text-align:center; color:red;">Errore caricamento dati.</div>';
+        });
+}
+
 	
 	
     initGame();
